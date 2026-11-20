@@ -77,11 +77,14 @@ def MenuLogic(jugador, oponente, vida_maxima_j, vida_maxima_o):
         ])
 
         try:
+            from characters.Models.BaseModel import Personaje
+            arena_panel = Personaje.render_arena_panel(jugador, oponente, vida_maxima_j, vida_maxima_o)
+
             accion = select_menu_option(
                 f"⚔️ MENÚ DE COMBATE — {jugador.nombre} vs {oponente.nombre}",
                 opciones_combate,
                 columnas=2,
-                render_header_func=lambda: menu_UI(jugador, oponente, vida_maxima_j, vida_maxima_o)
+                header_renderable=arena_panel
             )
 
             if accion is None:

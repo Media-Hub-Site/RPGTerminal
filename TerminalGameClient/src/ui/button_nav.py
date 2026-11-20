@@ -108,103 +108,104 @@ def select_menu_option(
     indice_inicial: int = 0,
     columnas: int = 1,
     header_info: Optional[str] = None,
-    render_header_func: Optional[Any] = None
+    render_header_func: Optional[Any] = None,
+    header_renderable: Optional[Any] = None
 ) -> Any:
     """
     Renderiza un menú de botones interactivo que se navega con flechas y ENTER.
-    
-    opciones: Lista de tuplas (valor_retorno, etiqueta_boton, descripcion_o_costo)
-    Ejemplo: [(1, "Atacar", "-10 SP"), (2, "Esperar", "+15 SP y +15 HP"), ...]
+    Utiliza Rich Live para actualizar in-situ sin parpadeos, sin scrollbars y
+    sin duplicar cabeceras en terminales Windows.
     """
     if not opciones:
         return None
 
+    from rich.live import Live
+    from rich.console import Group
+    import shutil
+
     indice = max(0, min(indice_inicial, len(opciones) - 1))
     reader = InputReader()
-    import shutil
-    from utils.console import clear_screen
-    first_render = True
+
+    def build_display(current_idx: int) -> Group:
+        term_cols = shutil.get_terminal_size((100, 30)).columns
+        actual_cols = columnas
+        if term_cols < 70 and actual_cols > 1:
+            actual_cols = 1
+
+        grid = Table.grid(padding=(0, 2), expand=True)
+        cols = max(1, actual_cols)
+        for _ in range(cols):
+            grid.add_column(justify="center", ratio=1)
+
+        botones_filas: List[List[Any]] = []
+        fila_actual = []
+
+        for i, (val, label, desc) in enumerate(opciones):
+            is_selected = (i == current_idx)
+            shortcut = str(val).upper()
+
+            if is_selected:
+                btn_text = f"[bold black on yellow] ▶ [{shortcut}] {label} ◀ [/bold black on yellow] [bold bright_yellow]{desc}[/bold bright_yellow]"
+                border_style = "bright_yellow"
+            else:
+                btn_text = f"[bold white][{shortcut}] {label}[/bold white] [dim]({desc})[/dim]"
+                border_style = "grey50"
+
+            panel_btn = Panel(btn_text, border_style=border_style, padding=(0, 1))
+            fila_actual.append(panel_btn)
+
+            if len(fila_actual) == cols:
+                botones_filas.append(fila_actual)
+                fila_actual = []
+
+        if fila_actual:
+            while len(fila_actual) < cols:
+                fila_actual.append("")
+            botones_filas.append(fila_actual)
+
+        for f in botones_filas:
+            grid.add_row(*f)
+
+        elements = []
+        if header_renderable is not None:
+            elements.append(header_renderable)
+        elif header_info is not None:
+            elements.append(header_info)
+
+        elements.append(Panel(grid, title=f"[bold yellow]{titulo}[/bold yellow]", border_style="bright_blue", padding=(0, 1)))
+        hint = "[dim cyan]🠄 🠆 🠅 🠇 Navega con Flechas o WASD | [ENTER/Espacio] Seleccionar | [1-9 / Teclas] Atajo directo[/dim cyan]"
+        elements.append(hint.center(min(term_cols, 100)))
+
+        return Group(*elements)
+
+    # Limpiar buffer previo de forma definitiva antes de iniciar el Live Display
+    os.system("cls")
 
     try:
-        while True:
-            # Reubicar cursor arriba fluidamente sin parpadeo de cls
-            if first_render:
-                clear_screen(full=True)
-                first_render = False
-            else:
-                clear_screen(full=False)
-            term_cols = shutil.get_terminal_size((100, 30)).columns
+        cols_count = max(1, columnas)
+        with Live(build_display(indice), console=console, auto_refresh=False, transient=True) as live:
+            while True:
+                live.update(build_display(indice), refresh=True)
+                event_type, event_val = reader.read_event()
 
-            # Ajustar columnas de forma responsiva: si la terminal es estrecha (< 70), usar 1 columna
-            actual_cols = columnas
-            if term_cols < 70 and actual_cols > 1:
-                actual_cols = 1
-
-            # Construir la cuadrícula de botones visuales compacta
-            grid = Table.grid(padding=(0, 2), expand=True)
-            cols = max(1, actual_cols)
-            for _ in range(cols):
-                grid.add_column(justify="center", ratio=1)
-
-            # Generar botones compactos de 1 línea con estilo resaltado para la opción activa
-            botones_filas: List[List[Any]] = []
-            fila_actual = []
-
-            for i, (val, label, desc) in enumerate(opciones):
-                is_selected = (i == indice)
-                shortcut = str(val).upper()
-
-                if is_selected:
-                    btn_text = f"[bold black on yellow] ▶ [{shortcut}] {label} ◀ [/bold black on yellow] [bold bright_yellow]{desc}[/bold bright_yellow]"
-                    border_style = "bright_yellow"
-                else:
-                    btn_text = f"[bold white][{shortcut}] {label}[/bold white] [dim]({desc})[/dim]"
-                    border_style = "grey50"
-
-                panel_btn = Panel(btn_text, border_style=border_style, padding=(0, 1))
-                fila_actual.append(panel_btn)
-
-                if len(fila_actual) == cols:
-                    botones_filas.append(fila_actual)
-                    fila_actual = []
-
-            if fila_actual:
-                while len(fila_actual) < cols:
-                    fila_actual.append("")
-                botones_filas.append(fila_actual)
-
-            for f in botones_filas:
-                grid.add_row(*f)
-
-            if render_header_func:
-                render_header_func()
-            elif header_info:
-                console.print(header_info)
-
-            console.print(Panel(grid, title=f"[bold yellow]{titulo}[/bold yellow]", border_style="bright_blue", padding=(0, 1)))
-            console.print("[dim cyan]🠄 🠆 🠅 🠇 Navega con Flechas o WASD | [ENTER/Espacio] Seleccionar | [1-9 / Teclas] Atajo directo[/dim cyan]".center(min(term_cols, 100)))
-
-            event_type, event_val = reader.read_event()
-
-            if event_type == 'UP':
-                indice = (indice - cols) % len(opciones)
-            elif event_type == 'DOWN':
-                indice = (indice + cols) % len(opciones)
-            elif event_type == 'LEFT':
-                indice = (indice - 1) % len(opciones)
-            elif event_type == 'RIGHT':
-                indice = (indice + 1) % len(opciones)
-            elif event_type == 'ENTER':
-                return opciones[indice][0]
-            elif event_type == 'ESCAPE':
-                return None
-            elif event_type == 'CHAR' and event_val:
-                # Comprobar si coincide con un atajo directo de las opciones
-                char_press = event_val.lower()
-                for i, (val, label, _) in enumerate(opciones):
-                    val_str = str(val).lower()
-                    if char_press == val_str or (len(label) > 0 and char_press == label[0].lower()):
-                        return val
+                if event_type == 'UP':
+                    indice = (indice - cols_count) % len(opciones)
+                elif event_type == 'DOWN':
+                    indice = (indice + cols_count) % len(opciones)
+                elif event_type == 'LEFT':
+                    indice = (indice - 1) % len(opciones)
+                elif event_type == 'RIGHT':
+                    indice = (indice + 1) % len(opciones)
+                elif event_type == 'ENTER':
+                    return opciones[indice][0]
+                elif event_type == 'ESCAPE':
+                    return None
+                elif event_type == 'CHAR' and event_val:
+                    char_press = event_val.lower()
+                    for i, (val, label, _) in enumerate(opciones):
+                        val_str = str(val).lower()
+                        if char_press == val_str or (len(label) > 0 and char_press == label[0].lower()):
+                            return val
     finally:
         reader.restore()
 
@@ -236,84 +237,83 @@ def select_character_grid() -> int:
         (0, "🎲 Aleatorio", "Azar", "Luchador sorpresa"),
     ]
 
+    from rich.live import Live
+    from rich.console import Group
+    import shutil
+
     indice = 0
     reader = InputReader()
-    first_render = True
+
+    def build_character_view(current_idx: int) -> Group:
+        term_cols = shutil.get_terminal_size((100, 30)).columns
+        sel_num, sel_name, sel_elem, sel_spec = personajes[current_idx]
+
+        # ---------------- Panel Izquierdo: Vista Previa ----------------
+        prev_table = Table.grid(expand=True)
+        prev_table.add_column(justify="center")
+
+        if sel_num == 0:
+            sprite_prev = Panel("[bold yellow]🎲\n\n?[/bold yellow]", padding=(3, 4), border_style="green")
+            prev_table.add_row(sprite_prev)
+            prev_table.add_row("[bold green]LUCHADOR SORPRESA[/bold green]")
+            prev_table.add_row("[dim cyan]Selección aleatoria[/dim cyan]")
+            prev_table.add_row("[dim yellow]¡Cualquiera puede tocar![/dim yellow]")
+        else:
+            sprite_prev = render_sprite_rich(sel_name, facing="right", pose="attack")
+            prev_table.add_row(sprite_prev)
+            prev_table.add_row(f"[bold yellow]{sel_name}[/bold yellow]")
+            prev_table.add_row(f"[cyan]<{sel_elem}>[/cyan]")
+            prev_table.add_row(f"[dim yellow]Técnicas: {sel_spec}[/dim yellow]")
+
+        prev_panel = Panel(prev_table, title="[bold cyan]VISTA PREVIA[/bold cyan]", border_style="bright_cyan", padding=(0, 1))
+
+        # ---------------- Panel Derecho: Lista de Luchadores ----------------
+        list_table = Table.grid(padding=(0, 1), expand=True)
+        list_table.add_column(ratio=1)
+        list_table.add_column(ratio=1)
+
+        for r in range(0, 10, 2):
+            row_panels = []
+            for c in range(2):
+                num, name, elem, _ = personajes[r + c]
+                is_sel = (r + c == current_idx)
+                if is_sel:
+                    btn = f"[bold black on yellow] ▶ [{num}] {name} ◀ [/bold black on yellow] [bold bright_yellow]<{elem}>[/bold bright_yellow]"
+                    border_style = "bright_yellow"
+                else:
+                    btn = f"[bold white][{num}] {name}[/bold white] [dim]<{elem}>[/dim]"
+                    border_style = "grey50"
+                p = Panel(btn, border_style=border_style, padding=(0, 1))
+                row_panels.append(p)
+            list_table.add_row(*row_panels)
+
+        is_rndm_sel = (current_idx == 10)
+        if is_rndm_sel:
+            rndm_btn = "[bold black on yellow] ▶ [0] 🎲 Elegir aleatoriamente ◀ [/bold black on yellow]"
+            rndm_border = "bright_yellow"
+        else:
+            rndm_btn = "[bold green][0] 🎲 Elegir aleatoriamente[/bold green]"
+            rndm_border = "green"
+        list_table.add_row(Panel(rndm_btn, border_style=rndm_border, padding=(0, 1)), "")
+
+        list_panel = Panel(list_table, title="[bold yellow]SELECCIONA TU LUCHADOR[/bold yellow]", border_style="bright_blue", padding=(0, 1))
+
+        layout = Table.grid(padding=(0, 2), expand=True)
+        layout.add_column(ratio=2, justify="center")
+        layout.add_column(ratio=4)
+        layout.add_row(prev_panel, list_panel)
+
+        main_panel = Panel(layout, title="[bold yellow]⚔️ MENÚ DE SELECCIÓN DE LUCHADOR ⚔️[/bold yellow]", border_style="bright_blue", padding=(0, 1))
+        hint = "[dim cyan]🠄 🠆 🠅 🠇 Flechas o WASD para moverte | [ENTER/Espacio] Elegir | [0-9] Atajo directo[/dim cyan]"
+        return Group(main_panel, hint.center(min(term_cols, 100)))
+
+    os.system("cls")
 
     try:
-        while True:
-            # Reubicar cursor arriba fluidamente sin parpadeos de cls completo
-            if first_render:
-                clear_screen(full=True)
-                first_render = False
-            else:
-                clear_screen(full=False)
-
-            term_cols = shutil.get_terminal_size((100, 30)).columns
-
-            sel_num, sel_name, sel_elem, sel_spec = personajes[indice]
-
-            # ---------------- Panel Izquierdo: Vista Previa ----------------
-            prev_table = Table.grid(expand=True)
-            prev_table.add_column(justify="center")
-
-            if sel_num == 0:
-                sprite_prev = Panel("[bold yellow]🎲\n\n?[/bold yellow]", padding=(3, 4), border_style="green")
-                prev_table.add_row(sprite_prev)
-                prev_table.add_row("[bold green]LUCHADOR SORPRESA[/bold green]")
-                prev_table.add_row("[dim cyan]Selección aleatoria[/dim cyan]")
-                prev_table.add_row("[dim yellow]¡Cualquiera puede tocar![/dim yellow]")
-            else:
-                sprite_prev = render_sprite_rich(sel_name, facing="right", pose="attack")
-                prev_table.add_row(sprite_prev)
-                prev_table.add_row(f"[bold yellow]{sel_name}[/bold yellow]")
-                prev_table.add_row(f"[cyan]<{sel_elem}>[/cyan]")
-                prev_table.add_row(f"[dim yellow]Técnicas: {sel_spec}[/dim yellow]")
-
-            prev_panel = Panel(prev_table, title="[bold cyan]VISTA PREVIA[/bold cyan]", border_style="bright_cyan", padding=(0, 1))
-
-            # ---------------- Panel Derecho: Lista de Luchadores ----------------
-            list_table = Table.grid(padding=(0, 1), expand=True)
-            list_table.add_column(ratio=1)
-            list_table.add_column(ratio=1)
-
-            for r in range(0, 10, 2):
-                row_panels = []
-                for c in range(2):
-                    num, name, elem, _ = personajes[r + c]
-                    is_sel = (r + c == indice)
-                    if is_sel:
-                        btn = f"[bold black on yellow] ▶ [{num}] {name} ◀ [/bold black on yellow] [bold bright_yellow]<{elem}>[/bold bright_yellow]"
-                        border_style = "bright_yellow"
-                    else:
-                        btn = f"[bold white][{num}] {name}[/bold white] [dim]<{elem}>[/dim]"
-                        border_style = "grey50"
-                    p = Panel(btn, border_style=border_style, padding=(0, 1))
-                    row_panels.append(p)
-                list_table.add_row(*row_panels)
-
-            # Opción 0 Aleatorio en la lista
-            is_rndm_sel = (indice == 10)
-            if is_rndm_sel:
-                rndm_btn = "[bold black on yellow] ▶ [0] 🎲 Elegir aleatoriamente ◀ [/bold black on yellow]"
-                rndm_border = "bright_yellow"
-            else:
-                rndm_btn = "[bold green][0] 🎲 Elegir aleatoriamente[/bold green]"
-                rndm_border = "green"
-            list_table.add_row(Panel(rndm_btn, border_style=rndm_border, padding=(0, 1)), "")
-
-            list_panel = Panel(list_table, title="[bold yellow]SELECCIONA TU LUCHADOR[/bold yellow]", border_style="bright_blue", padding=(0, 1))
-
-            # Contenedor maestro en Split-View
-            layout = Table.grid(padding=(0, 2), expand=True)
-            layout.add_column(ratio=2, justify="center")
-            layout.add_column(ratio=4)
-            layout.add_row(prev_panel, list_panel)
-
-            console.print(Panel(layout, title="[bold yellow]⚔️ MENÚ DE SELECCIÓN DE LUCHADOR ⚔️[/bold yellow]", border_style="bright_blue", padding=(0, 1)))
-            console.print("[dim cyan]🠄 🠆 🠅 🠇 Flechas o WASD para moverte | [ENTER/Espacio] Elegir | [0-9] Atajo directo[/dim cyan]".center(min(term_cols, 100)))
-
-            event_type, event_val = reader.read_event()
+        with Live(build_character_view(indice), console=console, auto_refresh=False, transient=True) as live:
+            while True:
+                live.update(build_character_view(indice), refresh=True)
+                event_type, event_val = reader.read_event()
 
             if event_type == 'UP':
                 if indice == 10:

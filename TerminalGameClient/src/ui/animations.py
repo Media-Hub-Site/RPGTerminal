@@ -599,7 +599,26 @@ def render_rich_combat_frame(attacker_name: str, defender_name: str, action_name
 
 
 def play_victory_animation(winner_name: str):
-    """Reproduce animación de victoria con asciimatics y audio sincronizado."""
+    """
+    Reproduce animación de victoria con asciimatics y audio sincronizado:
+    La animación se mantiene en pantalla exactamente el tiempo que dura el audio
+    de victoria del personaje (calculado desde el WAV), y se cierra justo al terminar.
+    """
+    audio_duration = 2.4
+    try:
+        import wave
+        from core.sound import sonidos
+        target_wav = None
+        for k, v in sonidos.items():
+            if winner_name.lower() in k.lower() and "win" in k.lower():
+                target_wav = v
+                break
+        if target_wav and os.path.exists(target_wav):
+            with wave.open(target_wav, 'r') as w:
+                audio_duration = w.getnframes() / float(w.getframerate())
+    except Exception:
+        pass
+
     try:
         from core.eventos import sonido_win
         sonido_win(winner_name)
@@ -607,6 +626,7 @@ def play_victory_animation(winner_name: str):
         pass
 
     if not CONFIG_ANIMACIONES['animaciones_activas']:
+        time.sleep(audio_duration)
         return
 
     try:
@@ -617,6 +637,9 @@ def play_victory_animation(winner_name: str):
 
         winner_idle = render_sprite_asciimatics(winner_name, facing="right", pose="idle")
         winner_attack = render_sprite_asciimatics(winner_name, facing="right", pose="attack")
+
+        # Ajustar frames según la duración exacta del audio (~20 frames por segundo)
+        victory_frames = max(25, int(audio_duration * 18))
 
         def _victory(screen):
             effects = []
@@ -635,10 +658,10 @@ def play_victory_animation(winner_name: str):
             effects.append(Print(screen, hero_renderer, y_vic + 7, x_hero, speed=5, transparent=True))
             effects.append(Print(screen, label, y_vic + 18, max(1, (screen.width - len(winner_name) - 18) // 2), colour=Screen.COLOUR_CYAN, transparent=True))
 
-            scene = Scene(effects, 35)
+            scene = Scene(effects, victory_frames)
             screen.play([scene], stop_on_resize=True, repeat=False)
 
         Screen.wrapper(_victory)
     except Exception:
         console.print(Panel(f"[bold yellow]★ ¡VICTORIA DE {winner_name.upper()}! ★[/bold yellow]", border_style="gold1"))
-        time.sleep(1.5)
+        time.sleep(audio_duration)

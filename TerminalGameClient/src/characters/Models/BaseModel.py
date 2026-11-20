@@ -45,7 +45,8 @@ class Personaje:
         }
     
     @staticmethod
-    def mostrar_estado(jugador, oponente, vida_maxima_j, vida_maxima_o):
+    def render_arena_panel(jugador, oponente, vida_maxima_j, vida_maxima_o):
+        """Retorna el Panel Renderable de Rich del campo de batalla sin imprimirlo."""
         from ui.sprites import render_sprite_rich
 
         def make_bar(current, maximum, length=10):
@@ -77,7 +78,12 @@ class Personaje:
         stats_o = f"❤️ HP: [green]{bar_o}[/green] {int(oponente.vida)}/{vida_maxima_o} | 🔋 SP: [yellow]{oponente.stamina}[/yellow] | ⚔️ ATK: [magenta]{oponente.poder}[/magenta]"
 
         arena.add_row(stats_j, " ", stats_o)
-        console.print(Panel(arena, title="[bold yellow]CAMPO DE BATALLA RPG[/bold yellow]", border_style="bright_blue", padding=(0, 1)))
+        return Panel(arena, title="[bold yellow]CAMPO DE BATALLA RPG[/bold yellow]", border_style="bright_blue", padding=(0, 1))
+
+    @staticmethod
+    def mostrar_estado(jugador, oponente, vida_maxima_j, vida_maxima_o):
+        panel = Personaje.render_arena_panel(jugador, oponente, vida_maxima_j, vida_maxima_o)
+        console.print(panel)
 
 
     def esperar(self):
