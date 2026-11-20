@@ -73,17 +73,11 @@ class Personaje:
 
         arena.add_row(sprite_j, "\n\n\n\n[yellow]• • •[/yellow]", sprite_o)
 
-        stats_j = (
-            f"❤️  HP: [green]{bar_j}[/green] {int(jugador.vida)}/{vida_maxima_j}\n"
-            f"🔋 SP: [yellow]{jugador.stamina}[/yellow] | ⚔️ ATK: [magenta]{jugador.poder}[/magenta]"
-        )
-        stats_o = (
-            f"❤️  HP: [green]{bar_o}[/green] {int(oponente.vida)}/{vida_maxima_o}\n"
-            f"🔋 SP: [yellow]{oponente.stamina}[/yellow] | ⚔️ ATK: [magenta]{oponente.poder}[/magenta]"
-        )
+        stats_j = f"❤️ HP: [green]{bar_j}[/green] {int(jugador.vida)}/{vida_maxima_j} | 🔋 SP: [yellow]{jugador.stamina}[/yellow] | ⚔️ ATK: [magenta]{jugador.poder}[/magenta]"
+        stats_o = f"❤️ HP: [green]{bar_o}[/green] {int(oponente.vida)}/{vida_maxima_o} | 🔋 SP: [yellow]{oponente.stamina}[/yellow] | ⚔️ ATK: [magenta]{oponente.poder}[/magenta]"
 
         arena.add_row(stats_j, " ", stats_o)
-        console.print(Panel(arena, title="[bold yellow]CAMPO DE BATALLA RPG[/bold yellow]", border_style="bright_blue"))
+        console.print(Panel(arena, title="[bold yellow]CAMPO DE BATALLA RPG[/bold yellow]", border_style="bright_blue", padding=(0, 1)))
 
 
     def esperar(self):

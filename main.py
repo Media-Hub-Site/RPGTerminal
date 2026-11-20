@@ -34,14 +34,14 @@ def _ensure_windows_console():
         kernel32.SetConsoleCP(65001)
         kernel32.SetConsoleOutputCP(65001)
 
-        # Ajustar dimensiones de ventana y búfer a un tamaño amplio (120 columnas x 34 filas)
-        # para que los gráficos Rich, galerías de personajes y barras de combate no desborden
+        # Ajustar dimensiones de ventana y búfer a 125 columnas x 36 filas
+        # para que todos los elementos (arena RPG, sprites 16x10 y botones) entren completos sin scrollbar
         try:
-            os.system("mode con: cols=120 lines=34 >nul 2>&1")
+            os.system("mode con: cols=125 lines=36 >nul 2>&1")
         except Exception:
             pass
 
-        # Si tenemos ventana de consola de Windows, intentar maximizarla o ajustarla
+        # Si tenemos ventana de consola de Windows, enfocar y maximizar
         hwnd = kernel32.GetConsoleWindow()
         if hwnd:
             try:

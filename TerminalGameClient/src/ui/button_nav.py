@@ -132,13 +132,13 @@ def select_menu_option(
             if term_cols < 70 and actual_cols > 1:
                 actual_cols = 1
 
-            # Construir la cuadrícula de botones visuales
-            grid = Table.grid(padding=(1, 2), expand=True)
+            # Construir la cuadrícula de botones visuales compacta
+            grid = Table.grid(padding=(0, 2), expand=True)
             cols = max(1, actual_cols)
             for _ in range(cols):
                 grid.add_column(justify="center", ratio=1)
 
-            # Generar botones con estilo resaltado para la opción activa
+            # Generar botones compactos de 1 línea con estilo resaltado para la opción activa
             botones_filas: List[List[Any]] = []
             fila_actual = []
 
@@ -147,10 +147,10 @@ def select_menu_option(
                 shortcut = str(val).upper()
 
                 if is_selected:
-                    btn_text = f"[bold black on yellow] ▶ [{shortcut}] {label} ◀ [/bold black on yellow]\n[bold bright_yellow]{desc}[/bold bright_yellow]"
+                    btn_text = f"[bold black on yellow] ▶ [{shortcut}] {label} ◀ [/bold black on yellow] [bold bright_yellow]{desc}[/bold bright_yellow]"
                     border_style = "bright_yellow"
                 else:
-                    btn_text = f"[white] [{shortcut}] {label} [/white]\n[dim]{desc}[/dim]"
+                    btn_text = f"[bold white][{shortcut}] {label}[/bold white] [dim]({desc})[/dim]"
                     border_style = "grey50"
 
                 panel_btn = Panel(btn_text, border_style=border_style, padding=(0, 1))
@@ -175,7 +175,7 @@ def select_menu_option(
             elif header_info:
                 console.print(header_info)
 
-            console.print(Panel(grid, title=f"[bold yellow]{titulo}[/bold yellow]", border_style="bright_blue"))
+            console.print(Panel(grid, title=f"[bold yellow]{titulo}[/bold yellow]", border_style="bright_blue", padding=(0, 1)))
             console.print("[dim cyan]🠄 🠆 🠅 🠇 Navega con Flechas o WASD | [ENTER/Espacio] Seleccionar | [1-9 / Teclas] Atajo directo[/dim cyan]".center(min(term_cols, 100)))
 
             event_type, event_val = reader.read_event()
