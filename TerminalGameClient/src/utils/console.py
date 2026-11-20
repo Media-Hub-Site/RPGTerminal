@@ -15,15 +15,14 @@ _ORIG_PRINT = builtins.print
 
 def clear_screen(full: bool = False) -> None:
     """
-    Limpia o reposiciona la pantalla de forma completamente fluida.
-    - Por defecto reposiciona el cursor arriba (\033[H\033[J) sin parpadear ni borrar buffer.
-    - Si full=True, limpia todo el buffer de pantalla sin depender de os.system('cls').
+    Limpia la pantalla en Windows y Unix de forma confiable:
+    - En Windows ejecuta cls (que limpia todo el buffer de la consola).
+    - También resetea la posición del cursor ANSI a (0,0).
     """
+    import os
     import sys
-    if full:
-        sys.stdout.write("\033[2J\033[H")
-    else:
-        sys.stdout.write("\033[H\033[J")
+    os.system("cls" if sys.platform == "win32" else "clear")
+    sys.stdout.write("\033[H")
     sys.stdout.flush()
 
 

@@ -24,37 +24,17 @@ STD_INPUT_HANDLE = -10
 
 
 class InputReader:
-    """Lee pulsaciones de teclado y eventos de ratón en tiempo real sin bloquear el búfer."""
+    """Lee pulsaciones de teclado directamente en tiempo real sin interferencias."""
 
     def __init__(self):
         self.is_windows = sys.platform == "win32"
-        self._orig_mode = None
-        self._h_in = None
-        if self.is_windows:
-            try:
-                import ctypes
-                from ctypes import wintypes
-                self.kernel32 = ctypes.windll.kernel32
-                self._h_in = self.kernel32.GetStdHandle(STD_INPUT_HANDLE)
-                mode = wintypes.DWORD()
-                if self.kernel32.GetConsoleMode(self._h_in, ctypes.byref(mode)):
-                    self._orig_mode = mode.value
-                    # Habilitar mouse input y desactivar quick edit para recibir clicks
-                    new_mode = (mode.value | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS) & ~ENABLE_QUICK_EDIT_MODE
-                    self.kernel32.SetConsoleMode(self._h_in, new_mode)
-            except Exception:
-                pass
 
     def restore(self):
-        if self.is_windows and self._orig_mode is not None and self._h_in:
-            try:
-                self.kernel32.SetConsoleMode(self._h_in, self._orig_mode)
-            except Exception:
-                pass
+        pass
 
     def read_event(self) -> Tuple[str, Any]:
         """
-        Lee una tecla o evento.
+        Lee una tecla presionada.
         Retorna tupla: (tipo, valor)
         Tipos:
           - 'UP', 'DOWN', 'LEFT', 'RIGHT'
@@ -64,16 +44,14 @@ class InputReader:
         if self.is_windows:
             import msvcrt
             while True:
-                # Leer tecla de teclado estándar
+                # Leer tecla de teclado estándar de Windows
                 ch = msvcrt.getwch()
-                if ch in ('\r', '\n'):
-                    return ('ENTER', None)
-                elif ch == ' ':
+                if ch in ('\r', '\n', ' '):
                     return ('ENTER', None)
                 elif ch == '\x1b':
                     return ('ESCAPE', None)
                 elif ch in ('\x00', '\xe0'):
-                    # Tecla especial extendida (flechas, funciones)
+                    # Tecla especial extendida (flechas de dirección)
                     code = msvcrt.getwch()
                     if code in ('H', '72'):
                         return ('UP', None)
@@ -94,8 +72,6 @@ class InputReader:
                 else:
                     return ('CHAR', ch)
         else:
-            # Fallback Unix / stdin
-            import select
             ch = sys.stdin.read(1)
             if ch in ('\r', '\n', ' '):
                 return ('ENTER', None)
