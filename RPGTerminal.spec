@@ -1,15 +1,18 @@
 # -*- mode: python ; coding: utf-8 -*-
 import sys
 import os
+from PyInstaller.utils.hooks import collect_data_files
 
 datas = [
     ('TerminalGameClient/assets/SFX', 'assets/SFX'),
     ('TerminalGameClient/assets/SFX', 'TerminalGameClient/assets/SFX'),
     ('assets/hub', 'assets/hub'),
-]
+] + collect_data_files('pyfiglet')
 
 hiddenimports = [
     'pygame',
+    'pyfiglet',
+    'pyfiglet.fonts',
     'rich',
     'rich.console',
     'rich.panel',

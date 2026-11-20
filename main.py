@@ -5,17 +5,57 @@ Integrado en el conglomerado MediaHub
 """
 import sys
 import os
+import traceback
 
-# Configuración de codificación UTF-8 para consola en Windows
-if sys.platform == "win32":
+
+def _ensure_windows_console():
+    """
+    Si el ejecutable fue lanzado desde MediaHub Launcher con DETACHED_PROCESS
+    (sin consola asociada), crea una nueva ventana de consola interactiva
+    y reconecta stdin/stdout/stderr en UTF-8 con soporte ANSI.
+    """
+    if sys.platform != "win32":
+        return
+
     try:
-        os.system("chcp 65001 > nul 2>&1")
-        if hasattr(sys.stdout, "reconfigure"):
-            sys.stdout.reconfigure(encoding="utf-8")
-        if hasattr(sys.stderr, "reconfigure"):
-            sys.stderr.reconfigure(encoding="utf-8")
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+
+        # Si no hay consola asociada (ej. lanzado con DETACHED_PROCESS), asignar una nueva
+        if kernel32.GetConsoleWindow() == 0:
+            if kernel32.AllocConsole():
+                # Reconectar descriptores estándar a la nueva consola
+                sys.stdin = open("CONIN$", "r", encoding="utf-8", errors="replace")
+                sys.stdout = open("CONOUT$", "w", encoding="utf-8", errors="replace")
+                sys.stderr = open("CONOUT$", "w", encoding="utf-8", errors="replace")
+
+        # Configurar título de ventana y codificación UTF-8 (65001)
+        kernel32.SetConsoleTitleW("RPG Terminal - MediaHub Edition")
+        kernel32.SetConsoleCP(65001)
+        kernel32.SetConsoleOutputCP(65001)
+
+        # Habilitar secuencias ANSI / VT100 (colores Rich y Asciimatics)
+        STD_OUTPUT_HANDLE = -11
+        ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
+        handle = kernel32.GetStdHandle(STD_OUTPUT_HANDLE)
+        if handle and handle != -1:
+            mode = ctypes.c_ulong()
+            if kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+                kernel32.SetConsoleMode(handle, mode.value | ENABLE_VIRTUAL_TERMINAL_PROCESSING)
+
+        # Reconfigurar flujos a UTF-8 si corresponde
+        for stream in (sys.stdout, sys.stderr, sys.stdin):
+            if stream and hasattr(stream, "reconfigure"):
+                try:
+                    stream.reconfigure(encoding="utf-8", errors="replace")
+                except Exception:
+                    pass
     except Exception:
         pass
+
+
+# Inicializar consola ANTES de importar Rich o Asciimatics
+_ensure_windows_console()
 
 # Asegurar rutas de importación tanto en desarrollo como en ejecutable empaquetado (PyInstaller)
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -35,12 +75,22 @@ install_rich_print()
 
 from core.menu_log import Juego
 
+
 def main():
     try:
         Juego()
     except (KeyboardInterrupt, SystemExit):
         print("\n\nSaliendo de RPG Terminal. ¡Hasta la próxima!")
         sys.exit(0)
+    except Exception as e:
+        print(f"\n[Error inesperado en RPG Terminal]: {e}")
+        traceback.print_exc()
+        try:
+            input("\nPresiona Enter para cerrar...")
+        except Exception:
+            pass
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
