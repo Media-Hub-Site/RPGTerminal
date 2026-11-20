@@ -176,18 +176,29 @@ def sonido_win(nombre):
 # _______________________________________________________________________
 
 def volver_a_jugar(jugador, oponente, resultado):
+    from ui.button_nav import select_menu_option
+
     if resultado:
         UI_MAP['win']()
     else:
         UI_MAP['derrota']()
 
+    opciones = [
+        (1, "Volver a jugar", "Iniciar una nueva partida"),
+        (2, "Salir del juego", "Cerrar RPG Terminal")
+    ]
+
     while True:
         try:
-            eleccion = int(input("\nEleccion: "))
+            eleccion = select_menu_option(
+                "🎮 ¿DESEAS VOLVER A JUGAR?",
+                opciones,
+                columnas=2
+            )
             if eleccion == 1:
                 R.Reset(jugador, oponente)
                 break
-            elif eleccion == 2:
+            elif eleccion in (2, None):
                 sound.sGameOver()
                 console.print("\n[bold yellow]**************** Terminando el programa. **************[/bold yellow]\n")
                 for i in range(3+1):

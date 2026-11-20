@@ -138,9 +138,10 @@ class Personaje:
 
     def elegir_Personaje():
         from utils.data import characters_list, characters_dict
+        from ui.button_nav import select_character_grid
 
         try:
-            eleccion = int(input("\nIntroduce el número de tu elección: "))
+            eleccion = select_character_grid()
             match eleccion:
                 case 0:
                     rndm = random.choice(characters_list)

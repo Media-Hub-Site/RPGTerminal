@@ -9,90 +9,49 @@ from core import UI_MAP
 
 
 def Tienda_log(jugador):
-    try:
-        producto = input("\nElige el producto: ")
+    from ui.button_nav import select_menu_option
 
-        if producto.isdigit():
+    pociones = {
+        1: ('Pocion_Vida_B', pocion.Pocion_B_Precio, "Vida básica (+25 HP)"),
+        2: ('Pocion_Stamin_B', pocion.Pocion_B_Precio, "Stamina básica (+25 SP)"),
+        3: ('Pocion_Poder_B', pocion.Pocion_B_Precio, "Poder básico (+25 ATK)"),
+        4: ('Pocion_Vida_A', pocion.Pocion_A_Precio, "Vida media (+40 HP)"),
+        5: ('Pocion_Stamin_A', pocion.Pocion_A_Precio, "Stamina media (+40 SP)"),
+        6: ('Pocion_Poder_A', pocion.Pocion_A_Precio, "Poder medio (+40 ATK)"),
+        7: ('Pocion_Vida_S', pocion.Pocion_S_Precio, "Vida avanzada (+70 HP)"),
+        8: ('Pocion_Stamin_S', pocion.Pocion_S_Precio, "Stamina avanzada (+70 SP)"),
+        9: ('Pocion_Poder_S', pocion.Pocion_S_Precio, "Poder avanzado (+70 ATK)"),
+        10: ('Pocion_Mix_SS', pocion.Pocion_SS_Precio, "Mix SS legendario (+35 all)"),
+    }
+
+    opciones = []
+    for k, (item_name, precio, desc) in pociones.items():
+        opciones.append((k, f"{item_name} [${precio}]", desc))
+    opciones.append(('r', "Salir de la tienda", "Volver al combate"))
+
+    try:
+        producto = select_menu_option(
+            f"🛒 TIENDA DE OBJETOS — Oro: ${jugador.moneda}",
+            opciones,
+            columnas=2
+        )
+
+        if producto is None or producto in ('r', 'R'):
+            UI_MAP['salir_tienda']()
+            return True
+
+        if isinstance(producto, str) and producto.isdigit():
             producto = int(producto)
-            
-        pociones = {
-            1: 'Pocion_Vida_B',
-            2: 'Pocion_Stamin_B',
-            3: 'Pocion_Poder_B',
-            4: 'Pocion_Vida_A',
-            5: 'Pocion_Stamin_A',
-            6: 'Pocion_Poder_A',
-            7: 'Pocion_Vida_S',
-            8: 'Pocion_Stamin_S',
-            9: 'Pocion_Poder_S',
-            10: 'Pocion_Mix_SS',
-        }
-        match producto:
-            case 1:
-                if moneyComprobator(jugador, producto):
-                    jugador.mochila.append(pociones[producto])
-                    jugador.moneda -= pocion.Pocion_B_Precio
-                    with Live(Panel("[bold green]Comprando...[/bold green]", title="Tienda"), console=console, refresh_per_second=4, transient=True):
-                        time.sleep(0.7)
-            case 2:
-                if moneyComprobator(jugador, producto):
-                    jugador.mochila.append(pociones[producto])
-                    jugador.moneda -= pocion.Pocion_B_Precio
-                    with Live(Panel("[bold green]Comprando...[/bold green]", title="Tienda"), console=console, refresh_per_second=4, transient=True):
-                        time.sleep(0.7)
-            case 3:
-                if moneyComprobator(jugador, producto):
-                    jugador.mochila.append(pociones[producto])
-                    jugador.moneda -= pocion.Pocion_B_Precio
-                    with Live(Panel("[bold green]Comprando...[/bold green]", title="Tienda"), console=console, refresh_per_second=4, transient=True):
-                        time.sleep(0.7)
-            case 4:
-                if moneyComprobator(jugador, producto):
-                    jugador.mochila.append(pociones[producto])
-                    jugador.moneda -= pocion.Pocion_A_Precio
-                    with Live(Panel("[bold green]Comprando...[/bold green]", title="Tienda"), console=console, refresh_per_second=4, transient=True):
-                        time.sleep(0.7)
-            case 5:
-                if moneyComprobator(jugador, producto):
-                    jugador.mochila.append(pociones[producto])
-                    jugador.moneda -= pocion.Pocion_A_Precio
-                    with Live(Panel("[bold green]Comprando...[/bold green]", title="Tienda"), console=console, refresh_per_second=4, transient=True):
-                        time.sleep(0.7)
-            case 6:
-                if moneyComprobator(jugador, producto):
-                    jugador.mochila.append(pociones[producto])
-                    jugador.moneda -= pocion.Pocion_A_Precio
-                    with Live(Panel("[bold green]Comprando...[/bold green]", title="Tienda"), console=console, refresh_per_second=4, transient=True):
-                        time.sleep(0.7)
-            case 7:
-                if moneyComprobator(jugador, producto):
-                    jugador.mochila.append(pociones[producto])
-                    jugador.moneda -= pocion.Pocion_S_Precio
-                    with Live(Panel("[bold green]Comprando...[/bold green]", title="Tienda"), console=console, refresh_per_second=4, transient=True):
-                        time.sleep(0.7)
-            case 8:
-                if moneyComprobator(jugador, producto):
-                    jugador.mochila.append(pociones[producto])
-                    jugador.moneda -= pocion.Pocion_S_Precio
-                    with Live(Panel("[bold green]Comprando...[/bold green]", title="Tienda"), console=console, refresh_per_second=4, transient=True):
-                        time.sleep(0.7)
-            case 9:
-                if moneyComprobator(jugador, producto):
-                    jugador.mochila.append(pociones[producto])
-                    jugador.moneda -= pocion.Pocion_S_Precio
-                    with Live(Panel("[bold green]Comprando...[/bold green]", title="Tienda"), console=console, refresh_per_second=4, transient=True):
-                        time.sleep(0.7)
-            case 10:
-                if moneyComprobator(jugador, producto):
-                    jugador.mochila.append(pociones[producto])
-                    jugador.moneda -= pocion.Pocion_SS_Precio
-                    with Live(Panel("[bold green]Comprando...[/bold green]", title="Tienda"), console=console, refresh_per_second=4, transient=True):
-                        time.sleep(0.7)
-            case 'r' | 'R':
-                UI_MAP['salir_tienda']()
-                return True
-            case _:
-                ERRORS['ERROR']()
+
+        if producto in pociones:
+            item_name, precio, _ = pociones[producto]
+            if moneyComprobator(jugador, producto):
+                jugador.mochila.append(item_name)
+                jugador.moneda -= precio
+                with Live(Panel("[bold green]Comprando...[/bold green]", title="Tienda"), console=console, refresh_per_second=4, transient=True):
+                    time.sleep(0.7)
+        else:
+            ERRORS['ERROR']()
     except ValueError as e:
         ERRORS['VALUEERROR'](e)
         

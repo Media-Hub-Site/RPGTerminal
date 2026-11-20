@@ -6,29 +6,36 @@ from utils.console import console, Table, Panel, Live
 
 
 def Mochila_log(jugador):
-    try:
-        usar = input("\n¿Que producto deseas usar? ").strip()
+    from ui.button_nav import select_menu_option
 
-        if usar.lower() == 'r':
+    if not jugador.mochila:
+        opciones = [('r', "Regresar", "Mochila vacía - Volver al combate")]
+    else:
+        opciones = []
+        for i, item in enumerate(jugador.mochila):
+            opciones.append((i + 1, f"Slot {i+1}: {item}", "Consumir poción"))
+        opciones.append(('r', "Regresar", "Volver al combate"))
+
+    try:
+        usar = select_menu_option(
+            f"🎒 MOCHILA / INVENTARIO — Capacidad: {len(jugador.mochila)}/10",
+            opciones,
+            columnas=2
+        )
+
+        if usar is None or usar in ('r', 'R'):
             return True
 
-        if usar.isdigit():
+        if isinstance(usar, str) and usar.isdigit():
             usar = int(usar)
+
+        if isinstance(usar, int) and 1 <= usar <= len(jugador.mochila):
+            mochilaComprobator(usar, jugador)
+            UI_MAP['pocion']()
+            time.sleep(1)
         else:
-            console.print("[red]Debes ingresar un número válido.[/red]")
-            return
-
-        # Llama al comprobador (que se encarga de TODO)
-        mochilaComprobator(usar, jugador)
-
-        # Este UI_MAP ya llama a la animación visual que tú tengas para “usar poción”
-        UI_MAP['pocion']()
-
-        # ❌ Ya NO imprimimos aquí el ítem usado.
-        # Se imprime dentro de mochilaComprobator sin riesgos
-
-        time.sleep(1)
-
+            console.print("[red]Opción no válida.[/red]")
+            time.sleep(1)
     except ValueError as e:
         ERRORS['VALUEERROR'](e)
 

@@ -16,8 +16,7 @@ def Juego():
         bienvenida()
 
         while True:
-            eleccion_UI()
-            # Elegir personaje
+            # Elegir personaje de forma interactiva con teclado / flechas / atajos
             jugador = Personaje.elegir_Personaje()
             if jugador:
                 break
@@ -45,14 +44,51 @@ def Juego():
 
 def MenuLogic(jugador, oponente, vida_maxima_j, vida_maxima_o):
     from ui.menu_ui import menu_UI, opciones_UI
+    from ui.button_nav import select_menu_option
+
+    MOVIMIENTOS = {
+        "Naruto": {4: ("Rasengan", 60), 7: ("Esquivar", 15), 8: ("RasenShuriken", 150)},
+        "Sasuke": {4: ("Chidori", 60), 7: ("Esquivar", 15), 8: ("Raikiri", 150)},
+        "Ichigo": {4: ("Getsuga Tensho", 50), 7: ("Esquivar", 15), 8: ("Bankai", 160)},
+        "Aizen": {4: ("Kido", 50), 7: ("Esquivar", 15), 8: ("Kyokasuigetsu", 130)},
+        "Kazuha": {4: ("Elemental", 50), 7: ("Esquivar", 15), 8: ("Ulti", 130)},
+        "Alhacen": {4: ("Elemental", 50), 7: ("Esquivar", 15), 8: ("Ulti", 130)},
+        "Iori": {4: ("Combo", 50), 7: ("Esquivar", 15), 8: ("Especial", 130)},
+        "Kyo": {4: ("Combo", 50), 7: ("Esquivar", 15), 8: ("Especial", 130)},
+        "Goku": {4: ("Kamehameha", 50), 7: ("Esquivar", 15), 8: ("Super Saiyajin", 130)},
+        "Vegeta": {4: ("Garlick Gun", 50), 7: ("Esquivar", 15), 8: ("Super Saiyajin", 130)},
+    }
+
     c = None
     while True: 
-        menu_UI(jugador, oponente, vida_maxima_j, vida_maxima_o)
-        try:
-            accion = input("\n Elige una opción: ").strip()  # <- deja como string
+        # Construir opciones interactivas para el combate
+        opciones_combate = [
+            (1, "Atacar", "-10 SP"),
+            (2, "Esperar", "+15 SP y +15 HP"),
+        ]
 
-            # si es un número, lo convertimos a int solo si es válido
-            if accion.isdigit():
+        if jugador.nombre in MOVIMIENTOS:
+            for k, (nom, costo) in MOVIMIENTOS[jugador.nombre].items():
+                opciones_combate.append((k, nom, f"-{costo} SP"))
+
+        opciones_combate.extend([
+            ('t', "Tienda", "Comprar pociones"),
+            ('e', "Mochila", "Ver inventario"),
+            ('o', "Opciones", "Efectos visuales"),
+        ])
+
+        try:
+            accion = select_menu_option(
+                f"⚔️ MENÚ DE COMBATE — {jugador.nombre} vs {oponente.nombre}",
+                opciones_combate,
+                columnas=2,
+                render_header_func=lambda: menu_UI(jugador, oponente, vida_maxima_j, vida_maxima_o)
+            )
+
+            if accion is None:
+                continue
+
+            if isinstance(accion, str) and accion.isdigit():
                 accion = int(accion)
 
             match accion:
@@ -231,11 +267,9 @@ def combos_(jugador, oponente):
 
 
 def tienda_(jugador):
-    from ui.tienda_ui import Tienda
     from core.tienda_log import Tienda_log
     UI_MAP['tienda']()
     while True:
-        Tienda(jugador)
         confirm = Tienda_log(jugador)
         if confirm:
             break
@@ -245,11 +279,9 @@ def tienda_(jugador):
 
 
 def mochila_(jugador):
-    from ui.mochila_ui import Mochila
     from core.mochila_log import Mochila_log
     UI_MAP['mochila']()
     while True:
-        Mochila(jugador)
         confirm = Mochila_log(jugador)
         if confirm:
             break
