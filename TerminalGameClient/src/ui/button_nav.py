@@ -121,12 +121,20 @@ def select_menu_option(
 
     indice = max(0, min(indice_inicial, len(opciones) - 1))
     reader = InputReader()
+    import shutil
 
     try:
         while True:
+            term_cols = shutil.get_terminal_size((100, 30)).columns
+
+            # Ajustar columnas de forma responsiva: si la terminal es estrecha (< 70), usar 1 columna
+            actual_cols = columnas
+            if term_cols < 70 and actual_cols > 1:
+                actual_cols = 1
+
             # Construir la cuadrícula de botones visuales
             grid = Table.grid(padding=(1, 2), expand=True)
-            cols = max(1, columnas)
+            cols = max(1, actual_cols)
             for _ in range(cols):
                 grid.add_column(justify="center", ratio=1)
 
@@ -168,7 +176,7 @@ def select_menu_option(
                 console.print(header_info)
 
             console.print(Panel(grid, title=f"[bold yellow]{titulo}[/bold yellow]", border_style="bright_blue"))
-            console.print("[dim cyan]🠄 🠆 🠅 🠇 Navega con Flechas o WASD | [ENTER/Espacio] Seleccionar | [1-9 / Teclas] Atajo directo[/dim cyan]".center(75))
+            console.print("[dim cyan]🠄 🠆 🠅 🠇 Navega con Flechas o WASD | [ENTER/Espacio] Seleccionar | [1-9 / Teclas] Atajo directo[/dim cyan]".center(min(term_cols, 100)))
 
             event_type, event_val = reader.read_event()
 
@@ -198,8 +206,11 @@ def select_menu_option(
 def select_character_grid() -> int:
     """
     Selector visual de personajes estilo galería interactiva con flechas y ENTER.
+    Totalmente responsivo: adapta el número de columnas (5, 3 o 2) según el ancho
+    real de la terminal para evitar desbordes y barras de desplazamiento horizontales.
     Retorna el número de personaje elegido (1 a 10, o 0 para aleatorio).
     """
+    import shutil
     from ui.sprites import render_sprite_rich
 
     personajes = [
@@ -222,14 +233,23 @@ def select_character_grid() -> int:
     try:
         while True:
             os.system("cls")
+            term_cols = shutil.get_terminal_size((100, 30)).columns
+
+            # Determinar columnas responsivas
+            if term_cols >= 115:
+                num_cols = 5
+            elif term_cols >= 75:
+                num_cols = 3
+            else:
+                num_cols = 2
 
             grid = Table.grid(padding=(0, 1), expand=True)
-            for _ in range(5):
+            for _ in range(num_cols):
                 grid.add_column(justify="center", ratio=1)
 
-            # Generar fila 1 (1 al 5)
-            row1_cards = []
-            for i in range(5):
+            # Construir tarjetas para los 10 personajes (0 a 9)
+            cards = []
+            for i in range(10):
                 num, name, elem = personajes[i]
                 is_sel = (i == indice)
                 sprite = render_sprite_rich(name, facing="right", pose="attack" if is_sel else "idle")
@@ -240,52 +260,41 @@ def select_character_grid() -> int:
                 card_content.add_row(title)
                 card_content.add_row(f"[cyan]<{elem}>[/cyan]")
                 card_panel = Panel(card_content, border_style="bright_yellow" if is_sel else "grey50", padding=(0, 0))
-                row1_cards.append(card_panel)
-            grid.add_row(*row1_cards)
+                cards.append(card_panel)
 
-            # Generar fila 2 (6 al 10)
-            row2_cards = []
-            for i in range(5, 10):
-                num, name, elem = personajes[i]
-                is_sel = (i == indice)
-                sprite = render_sprite_rich(name, facing="right", pose="attack" if is_sel else "idle")
-                title = f"[bold black on yellow] {num}. {name} [/bold black on yellow]" if is_sel else f"[bold white]{num}. {name}[/bold white]"
-                card_content = Table.grid(expand=True)
-                card_content.add_column(justify="center")
-                card_content.add_row(sprite)
-                card_content.add_row(title)
-                card_content.add_row(f"[cyan]<{elem}>[/cyan]")
-                card_panel = Panel(card_content, border_style="bright_yellow" if is_sel else "grey50", padding=(0, 0))
-                row2_cards.append(card_panel)
-            grid.add_row(*row2_cards)
+            # Distribuir tarjetas en filas según num_cols
+            for r in range(0, 10, num_cols):
+                row_items = cards[r:r + num_cols]
+                while len(row_items) < num_cols:
+                    row_items.append("")
+                grid.add_row(*row_items)
 
             console.print(Panel(grid, title="[bold yellow]⚔️ ELIGE TU LUCHADOR (Flechas + ENTER) ⚔️[/bold yellow]", border_style="bright_blue"))
 
             # Opción 0 Aleatorio
             is_rndm_sel = (indice == 10)
             rndm_style = "bold black on yellow" if is_rndm_sel else "green"
-            console.print(f"[{rndm_style}] [0] 🎲 Elegir aleatoriamente [/{rndm_style}]".center(80))
-            console.print("[dim cyan]🠄 🠆 🠅 🠇 Flechas/WASD para moverte | [ENTER] Elegir | [0-9] Atajo directo[/dim cyan]".center(75))
+            console.print(f"[{rndm_style}] [0] 🎲 Elegir aleatoriamente [/{rndm_style}]".center(min(term_cols, 100)))
+            console.print("[dim cyan]🠄 🠆 🠅 🠇 Flechas/WASD para moverte | [ENTER] Elegir | [0-9] Atajo directo[/dim cyan]".center(min(term_cols, 100)))
 
             event_type, event_val = reader.read_event()
 
             if event_type == 'UP':
                 if indice == 10:
-                    indice = 7  # Centro de fila 2
-                elif indice >= 5:
-                    indice -= 5
+                    indice = max(0, 10 - num_cols)
+                elif indice >= num_cols:
+                    indice -= num_cols
                 else:
                     indice = 10
             elif event_type == 'DOWN':
-                if indice < 5:
-                    indice += 5
+                if indice == 10:
+                    indice = 0
+                elif indice + num_cols < 10:
+                    indice += num_cols
                 else:
                     indice = 10
             elif event_type == 'LEFT':
-                if indice == 10:
-                    indice = 9
-                else:
-                    indice = (indice - 1) % 11
+                indice = (indice - 1) % 11
             elif event_type == 'RIGHT':
                 indice = (indice + 1) % 11
             elif event_type == 'ENTER':

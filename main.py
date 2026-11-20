@@ -34,6 +34,23 @@ def _ensure_windows_console():
         kernel32.SetConsoleCP(65001)
         kernel32.SetConsoleOutputCP(65001)
 
+        # Ajustar dimensiones de ventana y búfer a un tamaño amplio (120 columnas x 34 filas)
+        # para que los gráficos Rich, galerías de personajes y barras de combate no desborden
+        try:
+            os.system("mode con: cols=120 lines=34 >nul 2>&1")
+        except Exception:
+            pass
+
+        # Si tenemos ventana de consola de Windows, intentar maximizarla o ajustarla
+        hwnd = kernel32.GetConsoleWindow()
+        if hwnd:
+            try:
+                user32 = ctypes.windll.user32
+                SW_MAXIMIZE = 3
+                user32.ShowWindow(hwnd, SW_MAXIMIZE)
+            except Exception:
+                pass
+
         # Habilitar secuencias ANSI / VT100 (colores Rich y Asciimatics)
         STD_OUTPUT_HANDLE = -11
         ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004

@@ -64,6 +64,7 @@ def eleccion_UI():
 
 
 def menu_UI(jugador, oponente, vida_maxima_j, vida_maxima_o):
+    import shutil
     from characters.Models.BaseModel import Personaje
 
     if not jugador:
@@ -71,7 +72,8 @@ def menu_UI(jugador, oponente, vida_maxima_j, vida_maxima_o):
         jugador = Personaje.elegir_Personaje()
 
     Personaje.mostrar_estado(jugador, oponente, vida_maxima_j, vida_maxima_o)
-    ancho_total = 70
+    term_cols = shutil.get_terminal_size((100, 30)).columns
+    ancho_total = min(term_cols, 100)
     console.rule()
     console.print(f"🆚  Enfrentamiento contra: [cyan]{oponente.nombre}[/cyan]".center(ancho_total))
     console.rule()
