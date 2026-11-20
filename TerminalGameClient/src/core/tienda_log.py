@@ -13,13 +13,13 @@ def Tienda_log(jugador):
 
     pociones = {
         1: ('Pocion_Vida_B', pocion.Pocion_B_Precio, "Vida básica (+25 HP)"),
-        2: ('Pocion_Stamin_B', pocion.Pocion_B_Precio, "Stamina básica (+25 SP)"),
+        2: ('Pocion_Stamina_B', pocion.Pocion_B_Precio, "Stamina básica (+25 SP)"),
         3: ('Pocion_Poder_B', pocion.Pocion_B_Precio, "Poder básico (+25 ATK)"),
         4: ('Pocion_Vida_A', pocion.Pocion_A_Precio, "Vida media (+40 HP)"),
-        5: ('Pocion_Stamin_A', pocion.Pocion_A_Precio, "Stamina media (+40 SP)"),
+        5: ('Pocion_Stamina_A', pocion.Pocion_A_Precio, "Stamina media (+40 SP)"),
         6: ('Pocion_Poder_A', pocion.Pocion_A_Precio, "Poder medio (+40 ATK)"),
         7: ('Pocion_Vida_S', pocion.Pocion_S_Precio, "Vida avanzada (+70 HP)"),
-        8: ('Pocion_Stamin_S', pocion.Pocion_S_Precio, "Stamina avanzada (+70 SP)"),
+        8: ('Pocion_Stamina_S', pocion.Pocion_S_Precio, "Stamina avanzada (+70 SP)"),
         9: ('Pocion_Poder_S', pocion.Pocion_S_Precio, "Poder avanzado (+70 ATK)"),
         10: ('Pocion_Mix_SS', pocion.Pocion_SS_Precio, "Mix SS legendario (+35 all)"),
     }

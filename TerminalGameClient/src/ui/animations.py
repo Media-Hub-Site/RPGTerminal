@@ -7,6 +7,7 @@ Cumple con las especificaciones de Issue #2:
 - Modo de efectos extra opcional (partículas/estrellas)
 - Fallback seguro a Rich si la terminal no soporta pantalla completa
 """
+import os
 import sys
 import time
 from utils.console import console

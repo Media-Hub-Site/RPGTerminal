@@ -29,38 +29,65 @@ class InputReader:
     def __init__(self):
         self.is_windows = sys.platform == "win32"
 
+    def flush(self):
+        """Descarta teclas residuales acumuladas en el buffer (ej. tras animaciones)."""
+        if self.is_windows:
+            try:
+                import msvcrt
+                while msvcrt.kbhit():
+                    msvcrt.getwch()
+            except Exception:
+                pass
+
     def restore(self):
         pass
 
     def read_event(self) -> Tuple[str, Any]:
         """
         Lee una tecla presionada.
+        Soporta teclas extendidas Win32 (\x00/\xe0 + H/P/K/M) y secuencias VT100 (\x1b[A/B/C/D).
         Retorna tupla: (tipo, valor)
         Tipos:
           - 'UP', 'DOWN', 'LEFT', 'RIGHT'
           - 'ENTER', 'ESCAPE'
-          - 'CHAR' (con el caracter en mayúscula/minúscula)
+          - 'CHAR' (con el caracter presionado)
         """
         if self.is_windows:
             import msvcrt
             while True:
-                # Leer tecla de teclado estándar de Windows
                 ch = msvcrt.getwch()
-                if ch in ('\r', '\n', ' '):
+                if ch == '\x03':  # Ctrl+C
+                    raise KeyboardInterrupt()
+                elif ch in ('\r', '\n', ' '):
                     return ('ENTER', None)
                 elif ch == '\x1b':
+                    # Puede ser ESCAPE o una secuencia ANSI de flechas (\x1b[A, \x1b[B, \x1b[C, \x1b[D)
+                    if msvcrt.kbhit():
+                        nxt = msvcrt.getwch()
+                        if nxt in ('[', 'O') and msvcrt.kbhit():
+                            code = msvcrt.getwch()
+                            if code == 'A':
+                                return ('UP', None)
+                            elif code == 'B':
+                                return ('DOWN', None)
+                            elif code == 'D':
+                                return ('LEFT', None)
+                            elif code == 'C':
+                                return ('RIGHT', None)
+                        continue
                     return ('ESCAPE', None)
                 elif ch in ('\x00', '\xe0'):
-                    # Tecla especial extendida (flechas de dirección)
+                    # Tecla especial extendida Win32 (flechas de dirección)
                     code = msvcrt.getwch()
-                    if code in ('H', '72'):
+                    if code == 'H':
                         return ('UP', None)
-                    elif code in ('P', '80'):
+                    elif code == 'P':
                         return ('DOWN', None)
-                    elif code in ('K', '75'):
+                    elif code == 'K':
                         return ('LEFT', None)
-                    elif code in ('M', '77'):
+                    elif code == 'M':
                         return ('RIGHT', None)
+                    continue
                 elif ch.lower() == 'w':
                     return ('UP', None)
                 elif ch.lower() == 's':
@@ -75,6 +102,8 @@ class InputReader:
             ch = sys.stdin.read(1)
             if ch in ('\r', '\n', ' '):
                 return ('ENTER', None)
+            if ch == '\x1b':
+                return ('ESCAPE', None)
             return ('CHAR', ch)
 
 
@@ -156,13 +185,16 @@ def select_menu_option(
 
     # Limpiar buffer previo de forma definitiva antes de iniciar el Live Display
     os.system("cls")
+    reader.flush()
 
     try:
-        cols_count = max(1, columnas)
         with Live(build_display(indice), console=console, auto_refresh=False, transient=True) as live:
             while True:
                 live.update(build_display(indice), refresh=True)
                 event_type, event_val = reader.read_event()
+
+                term_cols = shutil.get_terminal_size((100, 30)).columns
+                cols_count = 1 if (term_cols < 70 and columnas > 1) else max(1, columnas)
 
                 if event_type == 'UP':
                     indice = (indice - cols_count) % len(opciones)
@@ -179,8 +211,7 @@ def select_menu_option(
                 elif event_type == 'CHAR' and event_val:
                     char_press = event_val.lower()
                     for i, (val, label, _) in enumerate(opciones):
-                        val_str = str(val).lower()
-                        if char_press == val_str or (len(label) > 0 and char_press == label[0].lower()):
+                        if char_press == str(val).lower():
                             return val
     finally:
         reader.restore()
@@ -284,6 +315,7 @@ def select_character_grid() -> int:
         return Group(main_panel, hint.center(min(term_cols, 100)))
 
     os.system("cls")
+    reader.flush()
 
     try:
         with Live(build_character_view(indice), console=console, auto_refresh=False, transient=True) as live:
@@ -291,37 +323,32 @@ def select_character_grid() -> int:
                 live.update(build_character_view(indice), refresh=True)
                 event_type, event_val = reader.read_event()
 
-            if event_type == 'UP':
-                if indice == 10:
-                    indice = 8  # Subir desde aleatorio a fila previa
-                elif indice >= 2:
-                    indice -= 2
-                else:
-                    indice = 10
-            elif event_type == 'DOWN':
-                if indice == 10:
-                    indice = 0
-                elif indice + 2 <= 10:
-                    indice += 2
-                else:
-                    indice = 10
-            elif event_type == 'LEFT':
-                if indice == 10:
-                    indice = 9
-                else:
+                if event_type == 'UP':
+                    if indice == 10:
+                        indice = 8  # Subir desde aleatorio a fila previa
+                    elif indice >= 2:
+                        indice -= 2
+                    else:
+                        indice = 10
+                elif event_type == 'DOWN':
+                    if indice == 10:
+                        indice = 0
+                    elif indice + 2 <= 9:
+                        indice += 2
+                    else:
+                        indice = 10
+                elif event_type == 'LEFT':
                     indice = (indice - 1) % 11
-            elif event_type == 'RIGHT':
-                indice = (indice + 1) % 11
-            elif event_type == 'ENTER':
-                return personajes[indice][0]
-            elif event_type == 'CHAR' and event_val:
-                if event_val.isdigit():
-                    val_int = int(event_val)
-                    if val_int == 0:
-                        return 0
-                    elif 1 <= val_int <= 9:
-                        return val_int
-                elif event_val.lower() == 'a':
-                    return 0
+                elif event_type == 'RIGHT':
+                    indice = (indice + 1) % 11
+                elif event_type == 'ENTER':
+                    return personajes[indice][0]
+                elif event_type == 'CHAR' and event_val:
+                    if event_val.isdigit():
+                        val_int = int(event_val)
+                        if val_int == 0:
+                            return 0
+                        elif 1 <= val_int <= 9:
+                            return val_int
     finally:
         reader.restore()
