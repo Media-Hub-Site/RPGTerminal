@@ -92,12 +92,78 @@ def play_intro_animation():
             pass
 
 
+def _resolve_attack_choreography(attacker_name: str, action_name: str, is_special: bool):
+    """
+    Determina la coreografía única (estilo, color primario, color secundario)
+    según el personaje y el nombre del ataque.
+    Colores Asciimatics: 0=BLACK, 1=RED, 2=GREEN, 3=YELLOW, 4=BLUE, 5=MAGENTA, 6=CYAN, 7=WHITE
+    """
+    act = (action_name or "").lower()
+    att = (attacker_name or "").lower()
+
+    # Ataque básico físico: acercamiento rápido + golpe
+    if "basico" in act or "básico" in act or act == "ataque":
+        return ("melee_dash", 3, 7)
+
+    # Naruto
+    if "rasenshuriken" in act or "shuriken" in act:
+        return ("projectile_spin", 6, 7)
+    if "rasengan" in act:
+        return ("dash_orb", 6, 4)
+
+    # Sasuke
+    if "chidori" in act or "raikiri" in act:
+        return ("dash_lightning", 6, 7)
+
+    # Goku / Vegeta
+    if "kamehameha" in act:
+        return ("beam", 6, 4)
+    if "garlick" in act or "galick" in act:
+        return ("beam", 5, 1)
+    if "saiyajin" in act or "ssj" in act:
+        return ("aura_burst", 3, 7)
+
+    # Ichigo
+    if "getsuga" in act:
+        return ("projectile_spin", 4, 6)
+    if "bankai" in act:
+        return ("dash_slash", 1, 7)
+
+    # Aizen
+    if "kido" in act:
+        return ("magic_seal", 5, 3)
+    if "kyoka" in act:
+        return ("magic_seal", 6, 5)
+
+    # Kyo / Iori
+    if "kyo" in att:
+        return ("fire_rush", 1, 3)
+    if "iori" in att:
+        return ("fire_rush", 5, 1)
+
+    # Kazuha
+    if "kazuha" in att:
+        return ("wind_vortex", 6, 1)
+
+    # Alhacen
+    if "alhacen" in att:
+        return ("dendro_mirrors", 2, 3)
+
+    # Fallback inteligente según si es especial o combo
+    if is_special:
+        return ("beam", 3, 7)
+    return ("melee_dash", 3, 7)
+
+
 def play_combat_animation(attacker_name: str, defender_name: str, action_name: str, damage: int, is_special: bool = False):
     """
-    Reproduce una animación de combate con asciimatics:
-    - Atacante y defensor dibujados en capas con sprites ASCII
-    - Efecto de impacto / proyectil en capa superior
-    - Números de daño flotantes
+    Reproduce una animación de combate coreografiada frame a frame con Asciimatics:
+    - Cada personaje y ataque tiene su propia animación única (dash con Rasengan,
+      rayo Kamehameha / Garlick Gun, proyectil RasenShuriken / Getsuga, embestida
+      eléctrica Chidori, corte veloz Bankai, aura Super Saiyajin, sellos Kido,
+      llamas de Kyo/Iori, vórtice Anemo de Kazuha, espejos Dendro de Alhacen).
+    - Movimiento suave, partículas de energía, sacudida de impacto (hit-shake)
+      y destello en el defensor.
     """
     if not CONFIG_ANIMACIONES['animaciones_activas']:
         return
@@ -105,55 +171,402 @@ def play_combat_animation(attacker_name: str, defender_name: str, action_name: s
     try:
         from asciimatics.screen import Screen
         from asciimatics.scene import Scene
-        from asciimatics.effects import Print, Stars
-        from asciimatics.renderers import StaticRenderer
+        from asciimatics.effects import Effect
+        from ui.sprites import draw_sprite_asciimatics
 
-        att_idle = render_sprite_asciimatics(attacker_name, facing="right", pose="idle")
-        att_attack = render_sprite_asciimatics(attacker_name, facing="right", pose="attack")
-        def_idle = render_sprite_asciimatics(defender_name, facing="left", pose="idle")
-        effect_sprite = get_effect_sprite('ulti' if is_special else 'atacar')
+        style, c_pri, c_sec = _resolve_attack_choreography(attacker_name, action_name, is_special)
+        total_frames = 38 if (is_special or style in ("beam", "aura_burst", "magic_seal", "wind_vortex", "dendro_mirrors")) else 32
+
+        class CombatChoreography(Effect):
+            def __init__(self, screen):
+                super().__init__(screen)
+                self._frame = 0
+
+            def reset(self):
+                self._frame = 0
+
+            def _safe_print(self, text: str, x: int, y: int, colour: int = 7, attr: int = 1, bg: int = 0):
+                if 0 <= y < self._screen.height and x < self._screen.width:
+                    if x < 0:
+                        text = text[-x:]
+                        x = 0
+                    if text:
+                        max_len = self._screen.width - x
+                        self._screen.print_at(text[:max_len], x, y, colour=colour, attr=attr, bg=bg)
+
+            def _draw_orb(self, cx: int, cy: int, radius: int, frame: int, col1: int, col2: int):
+                spin = ["◎", "◉", "◌", "●"]
+                ch_core = spin[frame % len(spin)]
+                if radius <= 1:
+                    self._safe_print(f"({ch_core})", cx - 1, cy, col1, 1)
+                elif radius == 2:
+                    self._safe_print(" ▄▀▄ ", cx - 2, cy - 1, col1, 1)
+                    self._safe_print(f"█ {ch_core} █", cx - 2, cy, col2, 1)
+                    self._safe_print(" ▀▄▀ ", cx - 2, cy + 1, col1, 1)
+                else:
+                    self._safe_print("  ▄▄▄  ", cx - 3, cy - 2, col1, 1)
+                    self._safe_print(" █████ ", cx - 3, cy - 1, col2, 1)
+                    self._safe_print(f"██ {ch_core} ██", cx - 3, cy, 7, 1)
+                    self._safe_print(" █████ ", cx - 3, cy + 1, col2, 1)
+                    self._safe_print("  ▀▀▀  ", cx - 3, cy + 2, col1, 1)
+
+            def _draw_impact_burst(self, cx: int, cy: int, frame: int, col1: int, col2: int):
+                if frame % 2 == 0:
+                    self._safe_print("  \\  |  /  ", cx - 5, cy - 2, col1, 1)
+                    self._safe_print("-- ✦ ★ ✦ --", cx - 5, cy, col2, 1)
+                    self._safe_print("  /  |  \\  ", cx - 5, cy + 2, col1, 1)
+                else:
+                    self._safe_print(" *  \\|/  * ", cx - 5, cy - 2, col2, 1)
+                    self._safe_print("══ ▓███▓ ══", cx - 5, cy, 7, 1)
+                    self._safe_print(" *  /|\\  * ", cx - 5, cy + 2, col2, 1)
+
+            def _update(self, frame_no):
+                f = self._frame
+                self._frame += 1
+
+                w = self._screen.width
+                h = self._screen.height
+
+                # Limpiar frame anterior para movimiento limpio sin estelas fantasma
+                self._screen.clear_buffer(7, 0, 0)
+
+                y_base = max(4, (h - 10) // 2)
+                x_att_start = max(4, w // 6)
+                x_def_base = max(x_att_start + 26, (w * 4) // 6)
+                if x_def_base + 18 >= w:
+                    x_def_base = max(x_att_start + 18, w - 20)
+
+                # Línea de suelo de la arena
+                floor_y = y_base + 10
+                if floor_y < h:
+                    self._safe_print("═" * max(10, w - 4), 2, floor_y, colour=4, attr=2)
+
+                # Banner superior de técnica
+                banner = f" ★ {attacker_name.upper()} USA: {action_name.upper()}! ★ "
+                self._safe_print(banner, max(1, (w - len(banner)) // 2), max(0, y_base - 3), colour=c_pri, attr=1)
+
+                # Estado por defecto de los personajes
+                x_att = x_att_start
+                y_att = y_base
+                att_pose = "idle"
+
+                x_def = x_def_base
+                y_def = y_base
+                def_flash = None
+                show_dmg = False
+
+                # ---------------------------------------------------------
+                # COREOGRAFÍAS ÚNICAS POR ESTILO DE ATAQUE
+                # ---------------------------------------------------------
+                if style == "dash_orb":
+                    # NARUTO RASENGAN: Carga esfera -> corre hacia el rival -> impacto explosivo
+                    if f < 10:
+                        att_pose = "attack"
+                        # Dibujar carga de Rasengan frente a Naruto
+                        r = 1 if f < 5 else 2
+                        self._draw_orb(x_att + 17, y_att + 5, r, f, c_pri, c_sec)
+                        if f % 2 == 0:
+                            self._safe_print("✦", x_att + 15 + (f % 4), y_att + 3, 7, 1)
+                    elif f < 20:
+                        # Embestida rápida hacia el enemigo llevando el Rasengan
+                        t = (f - 10) / 10.0
+                        x_att = int(x_att_start + (x_def_base - 15 - x_att_start) * t)
+                        att_pose = "attack"
+                        # Estela de velocidad detrás
+                        self._safe_print("═══", max(0, x_att - 4), y_att + 4, c_pri, 2)
+                        self._safe_print("══", max(0, x_att - 3), y_att + 7, c_sec, 2)
+                        self._draw_orb(x_att + 16, y_att + 5, 2, f, c_pri, c_sec)
+                    elif f < 28:
+                        # Impacto del Rasengan en el enemigo
+                        x_att = x_def_base - 15
+                        att_pose = "attack"
+                        x_def = x_def_base + (2 if f % 2 == 0 else -1)
+                        def_flash = 6 if f % 2 == 0 else 7
+                        show_dmg = True
+                        self._draw_orb(x_def + 4, y_def + 5, 3, f, c_pri, c_sec)
+                        self._draw_impact_burst(x_def + 6, y_def + 5, f, c_pri, 7)
+                    else:
+                        # Retorno rápido
+                        t = (f - 28) / max(1, total_frames - 28)
+                        x_att = int((x_def_base - 15) * (1 - t) + x_att_start * t)
+                        show_dmg = True
+
+                elif style == "beam":
+                    # GOKU KAMEHAMEHA / VEGETA GARLICK GUN: Carga en su sitio -> rayo masivo
+                    if f < 12:
+                        att_pose = "attack"
+                        r = 1 if f < 6 else 2
+                        self._draw_orb(x_att + 17, y_att + 5, r, f, c_pri, c_sec)
+                        # Partículas convergiendo hacia la bola de energía
+                        dist = max(1, 12 - f)
+                        self._safe_print("✦", x_att + 17 + dist, y_att + 5 - (dist // 3), c_pri, 1)
+                        self._safe_print("✦", x_att + 17 + dist, y_att + 5 + (dist // 3), c_sec, 1)
+                    elif f < 30:
+                        att_pose = "attack"
+                        # El rayo se extiende desde el atacante hasta atravesar al defensor
+                        beam_start = x_att + 16
+                        beam_end = x_def_base + 16
+                        progress = min(1.0, (f - 12) / 6.0)
+                        cur_end = int(beam_start + (beam_end - beam_start) * progress)
+                        length = max(1, cur_end - beam_start)
+
+                        # Dibujar haz de energía multicapa (borde + núcleo blanco brillante)
+                        edge_char = "▀" if f % 2 == 0 else "▓"
+                        bot_char = "▄" if f % 2 == 0 else "▓"
+                        self._safe_print(edge_char * length, beam_start, y_att + 3, c_sec, 1)
+                        self._safe_print("█" * length, beam_start, y_att + 4, c_pri, 1)
+                        self._safe_print("█" * length, beam_start, y_att + 5, 7, 1)
+                        self._safe_print("█" * length, beam_start, y_att + 6, c_pri, 1)
+                        self._safe_print(bot_char * length, beam_start, y_att + 7, c_sec, 1)
+
+                        # Cabeza de la bola de energía al frente del rayo
+                        self._draw_orb(cur_end, y_att + 5, 3, f, c_pri, 7)
+
+                        if cur_end >= x_def_base:
+                            x_def = x_def_base + (2 if f % 2 == 0 else -2)
+                            def_flash = 7 if f % 2 == 0 else c_pri
+                            show_dmg = True
+                    else:
+                        show_dmg = True
+                        if f < 34:
+                            self._draw_impact_burst(x_def + 8, y_def + 5, f, c_pri, 7)
+
+                elif style == "projectile_spin":
+                    # NARUTO RASENSHURIKEN / ICHIGO GETSUGA TENSHO: Proyectil volador + explosión
+                    if f < 8:
+                        att_pose = "attack"
+                        self._draw_orb(x_att + 16, y_att + 4, 2, f, c_pri, c_sec)
+                    elif f < 22:
+                        att_pose = "attack"
+                        t = (f - 8) / 14.0
+                        px = int((x_att + 16) + (x_def_base + 4 - (x_att + 16)) * t)
+                        if "getsuga" in (action_name or "").lower():
+                            # Media luna cortante (Getsuga Tensho)
+                            self._safe_print("  ▄▄█", px, y_att + 2, c_sec, 1)
+                            self._safe_print("   ███", px, y_att + 3, c_pri, 1)
+                            self._safe_print("    ███", px, y_att + 4, 7, 1)
+                            self._safe_print("    ███", px, y_att + 5, 7, 1)
+                            self._safe_print("   ███", px, y_att + 6, c_pri, 1)
+                            self._safe_print("  ▀▀█", px, y_att + 7, c_sec, 1)
+                        else:
+                            # Shuriken giratorio (RasenShuriken)
+                            blades = [" ╲ │ ╱ ", " ──◉── ", " ╱ │ ╲ "] if f % 2 == 0 else ["  ─┼─  ", " ╲ ◉ ╱ ", "  ─┼─  "]
+                            for idx, line in enumerate(blades):
+                                self._safe_print(line, px - 3, y_att + 3 + idx, c_pri if idx != 1 else 7, 1)
+                    elif f < 31:
+                        x_def = x_def_base + (2 if f % 2 == 0 else -2)
+                        def_flash = c_pri if f % 2 == 0 else 7
+                        show_dmg = True
+                        self._draw_orb(x_def + 8, y_def + 5, 3, f, c_pri, c_sec)
+                        self._draw_impact_burst(x_def + 8, y_def + 5, f, c_pri, 7)
+                    else:
+                        show_dmg = True
+
+                elif style == "dash_lightning":
+                    # SASUKE CHIDORI / RAIKIRI: Chispas -> embestida relámpago -> descarga
+                    if f < 9:
+                        att_pose = "attack"
+                        sparks = ["⚡", "╱", "╲", "*"]
+                        self._safe_print(sparks[f % 4], x_att + 16, y_att + 3, c_pri, 1)
+                        self._safe_print("⚡⚡", x_att + 15, y_att + 5, 7, 1)
+                        self._safe_print(sparks[(f + 2) % 4], x_att + 17, y_att + 7, c_pri, 1)
+                    elif f < 17:
+                        t = (f - 9) / 8.0
+                        x_att = int(x_att_start + (x_def_base - 14 - x_att_start) * t)
+                        att_pose = "attack"
+                        # Rastro eléctrico
+                        for bx in range(x_att_start + 8, x_att, 4):
+                            self._safe_print("⚡" if (bx + f) % 2 == 0 else "═", bx, y_att + 5, c_pri, 1)
+                    elif f < 26:
+                        x_att = x_def_base - 14
+                        att_pose = "attack"
+                        x_def = x_def_base + (2 if f % 2 == 0 else -2)
+                        def_flash = 6 if f % 2 == 0 else 7
+                        show_dmg = True
+                        # Rayos verticales sobre el enemigo
+                        for ly in range(max(0, y_def - 2), min(h, y_def + 10)):
+                            self._safe_print("⚡" if (ly + f) % 2 == 0 else "║", x_def + 8, ly, c_pri, 1)
+                        self._draw_impact_burst(x_def + 8, y_def + 5, f, c_pri, 7)
+                    else:
+                        t = (f - 26) / max(1, total_frames - 26)
+                        x_att = int((x_def_base - 14) * (1 - t) + x_att_start * t)
+                        show_dmg = True
+
+                elif style == "dash_slash":
+                    # ICHIGO BANKAI: Corte dimensional atravesando al rival
+                    if f < 10:
+                        att_pose = "attack"
+                        for ay in range(y_att, y_att + 10):
+                            self._safe_print("░" if (ay + f) % 2 == 0 else "▒", x_att - 2, ay, c_pri, 1)
+                            self._safe_print("░" if (ay + f) % 2 == 0 else "▒", x_att + 17, ay, c_pri, 1)
+                    elif f < 16:
+                        # Atraviesa a velocidad supersónica
+                        t = (f - 10) / 6.0
+                        x_att = int(x_att_start + (min(w - 18, x_def_base + 14) - x_att_start) * t)
+                        att_pose = "attack"
+                        self._safe_print("═══════════════", x_att_start + 6, y_att + 5, c_pri, 1)
+                    elif f < 28:
+                        x_att = min(w - 18, x_def_base + 14)
+                        att_pose = "attack"
+                        x_def = x_def_base + (2 if f % 2 == 0 else -2)
+                        def_flash = 1 if f % 2 == 0 else 7
+                        show_dmg = True
+                        # Gran corte diagonal sobre el enemigo
+                        for s in range(-4, 5):
+                            self._safe_print("╱", x_def + 8 - s * 2, y_def + 5 + s, c_pri, 1)
+                            self._safe_print("╲", x_def + 8 + s * 2, y_def + 5 + s, 7, 1)
+                    else:
+                        show_dmg = True
+
+                elif style == "aura_burst":
+                    # GOKU / VEGETA SUPER SAIYAJIN: Columna de aura dorada + embestida relámpago
+                    if f < 14:
+                        att_pose = "attack"
+                        # Columna de aura dorada envolviendo al atacante
+                        for ay in range(max(0, y_att - 2), min(h, y_att + 10)):
+                            ch = "▲" if (ay + f) % 2 == 0 else "▓"
+                            self._safe_print(ch, x_att - 2, ay, c_pri, 1)
+                            self._safe_print(ch, x_att + 17, ay, c_pri, 1)
+                        self._safe_print("★ ⚡ ★ ⚡ ★", x_att + 3, max(0, y_att - 2), c_pri, 1)
+                    elif f < 22:
+                        t = (f - 14) / 8.0
+                        x_att = int(x_att_start + (x_def_base - 14 - x_att_start) * t)
+                        att_pose = "attack"
+                        self._safe_print("▓▓▓▓▓", max(0, x_att - 5), y_att + 4, c_pri, 1)
+                        self._safe_print("▓▓▓▓▓", max(0, x_att - 5), y_att + 6, c_pri, 1)
+                    elif f < 32:
+                        x_att = x_def_base - 14
+                        att_pose = "attack"
+                        x_def = x_def_base + (2 if f % 2 == 0 else -2)
+                        def_flash = 3 if f % 2 == 0 else 7
+                        show_dmg = True
+                        self._draw_impact_burst(x_def + 8, y_def + 5, f, c_pri, 7)
+                    else:
+                        show_dmg = True
+
+                elif style == "magic_seal":
+                    # AIZEN KIDO / KYOKASUIGETSU: Sello mágico sobre el enemigo + pilar de energía
+                    att_pose = "attack"
+                    if f < 14:
+                        # Dibujar jaula/sello mágico alrededor del enemigo
+                        self._safe_print("╔═══ ✦ ═══╗", x_def + 2, max(0, y_def - 1), c_pri, 1)
+                        self._safe_print("╚═══ ✦ ═══╝", x_def + 2, min(h - 1, y_def + 10), c_pri, 1)
+                        if f > 6:
+                            for sy in range(y_def, y_def + 10):
+                                self._safe_print("║", x_def + 2, sy, c_sec, 1)
+                                self._safe_print("║", x_def + 12, sy, c_sec, 1)
+                    elif f < 28:
+                        x_def = x_def_base + (2 if f % 2 == 0 else -2)
+                        def_flash = c_pri if f % 2 == 0 else 7
+                        show_dmg = True
+                        # Pilar vertical de energía mágica
+                        for sy in range(max(0, y_def - 2), min(h, y_def + 10)):
+                            self._safe_print("░▒▓███▓▒░", x_def + 3, sy, c_pri if (sy + f) % 2 == 0 else c_sec, 1)
+                    else:
+                        show_dmg = True
+
+                elif style == "fire_rush":
+                    # KYO / IORI: Embestida con llamas + pilar de fuego
+                    if f < 14:
+                        t = f / 14.0
+                        x_att = int(x_att_start + (x_def_base - 14 - x_att_start) * t)
+                        att_pose = "attack"
+                        # Estela de fuego en el suelo
+                        for fx in range(x_att_start, x_att, 3):
+                            self._safe_print("▲", fx, min(h - 1, y_att + 9), c_pri if (fx + f) % 2 == 0 else c_sec, 1)
+                    elif f < 26:
+                        x_att = x_def_base - 14
+                        att_pose = "attack"
+                        x_def = x_def_base + (2 if f % 2 == 0 else -2)
+                        def_flash = c_pri if f % 2 == 0 else c_sec
+                        show_dmg = True
+                        # Pilar de llamas ascendiendo
+                        for fy in range(max(0, y_def - 1), min(h, y_def + 10)):
+                            flame = "▲▓█▓▲" if (fy + f) % 2 == 0 else "▓▲█▲▓"
+                            self._safe_print(flame, x_def + 5, fy, c_pri if fy % 2 == 0 else c_sec, 1)
+                    else:
+                        t = (f - 26) / max(1, total_frames - 26)
+                        x_att = int((x_def_base - 14) * (1 - t) + x_att_start * t)
+                        show_dmg = True
+
+                elif style == "wind_vortex":
+                    # KAZUHA: Torbellino Anemo + hojas otoñales
+                    att_pose = "attack"
+                    if f < 10:
+                        # Kazuha salta ligeramente
+                        y_att = max(2, y_base - 2)
+                    if 6 <= f < 28:
+                        x_def = x_def_base + (2 if f % 2 == 0 else -2)
+                        y_def = max(2, y_base - (2 if f < 20 else 0))
+                        def_flash = 6 if f % 2 == 0 else 7
+                        show_dmg = (f >= 14)
+                        # Espirales de viento y hojas rojas/amarillas
+                        for vy in range(y_base - 1, y_base + 10):
+                            offset = (vy + f) % 4
+                            self._safe_print("~~~" if offset < 2 else "≈≈≈", x_def + 2 + offset, vy, c_pri, 1)
+                            if (vy + f) % 3 == 0:
+                                self._safe_print("🍁", x_def + 12 - offset, vy, c_sec, 1)
+                    elif f >= 28:
+                        show_dmg = True
+
+                elif style == "dendro_mirrors":
+                    # ALHACEN: Espejos prismáticos verdes + haces láser sincronizados
+                    att_pose = "attack"
+                    # Dibujar 3 espejos alrededor del rival
+                    if f < 28:
+                        self._safe_print("◆", x_def + 8, max(0, y_def - 2), c_pri, 1)
+                        self._safe_print("◆", max(0, x_def - 4), y_def + 4, c_pri, 1)
+                        self._safe_print("◆", min(w - 2, x_def + 20), y_def + 4, c_pri, 1)
+                    if 10 <= f < 28:
+                        x_def = x_def_base + (1 if f % 2 == 0 else -1)
+                        def_flash = 2 if f % 2 == 0 else 7
+                        show_dmg = True
+                        # Haces láser convergiendo al enemigo
+                        for ly in range(max(0, y_def - 1), y_def + 6):
+                            self._safe_print("║", x_def + 8, ly, c_pri, 1)
+                        self._safe_print("══════", max(0, x_def - 3), y_def + 4, c_sec, 1)
+                        self._safe_print("══════", x_def + 13, y_def + 4, c_sec, 1)
+                        self._draw_impact_burst(x_def + 8, y_def + 5, f, c_pri, c_sec)
+                    elif f >= 28:
+                        show_dmg = True
+
+                else:
+                    # MELEE_DASH (Ataque Básico): Acercamiento rápido, golpe y retroceso
+                    if f < 10:
+                        t = f / 10.0
+                        x_att = int(x_att_start + (x_def_base - 14 - x_att_start) * t)
+                        att_pose = "attack"
+                    elif f < 18:
+                        x_att = x_def_base - 14
+                        att_pose = "attack"
+                        x_def = x_def_base + (2 if f % 2 == 0 else -1)
+                        def_flash = 1 if f % 2 == 0 else 7
+                        show_dmg = True
+                        self._draw_impact_burst(x_def + 5, y_def + 5, f, c_pri, c_sec)
+                    else:
+                        t = (f - 18) / max(1, total_frames - 18)
+                        x_att = int((x_def_base - 14) * (1 - t) + x_att_start * t)
+                        show_dmg = True
+
+                # Dibujar sprites de ambos personajes
+                draw_sprite_asciimatics(self._screen, defender_name, x_def, y_def, facing="left", pose="idle", flash_colour=def_flash)
+                draw_sprite_asciimatics(self._screen, attacker_name, x_att, y_att, facing="right", pose=att_pose)
+
+                # Etiquetas de nombres
+                self._safe_print(f"[{attacker_name}]", x_att + 2, max(0, y_att - 1), colour=2, attr=1)
+                self._safe_print(f"[{defender_name}]", x_def + 2, max(0, y_def - 1), colour=1, attr=1)
+
+                # Cartel flotante de daño al impactar
+                if show_dmg and damage > 0:
+                    dmg_str = f" >> -{damage} HP! << "
+                    self._safe_print(dmg_str, max(0, x_def), max(0, y_def - 2), colour=7, attr=1, bg=1)
+
+            @property
+            def stop_frame(self):
+                return total_frames
 
         def _combat(screen):
-            effects = []
-
-            # Capa 0 (fondo opcional): Estrellas/partículas
-            if CONFIG_ANIMACIONES['efectos_extra'] and is_special:
-                effects.append(Stars(screen, 25))
-
-            # Posiciones relativas a la resolución de la terminal
-            h = screen.height
-            w = screen.width
-
-            y_pos = max(3, (h - 12) // 2)
-            x_att = max(4, w // 6)
-            x_def = max(x_att + 26, (w * 4) // 6)
-
-            # Capa 1: Personajes chibi pixel-art enfrentados (atacante anima idle -> ataque)
-            att_renderer = StaticRenderer(images=[att_idle, att_attack, att_attack])
-            def_renderer = StaticRenderer(images=[def_idle])
-
-            effects.append(Print(screen, att_renderer, y_pos, x_att, speed=4, transparent=True))
-            effects.append(Print(screen, def_renderer, y_pos, x_def, transparent=True))
-
-            # Nombres sobre los sprites
-            att_label = StaticRenderer(images=[f"[{attacker_name}]"])
-            def_label = StaticRenderer(images=[f"[{defender_name}]"])
-            effects.append(Print(screen, att_label, max(0, y_pos - 2), x_att + 2, colour=Screen.COLOUR_GREEN, transparent=True))
-            effects.append(Print(screen, def_label, max(0, y_pos - 2), x_def + 2, colour=Screen.COLOUR_RED, transparent=True))
-
-            # Capa 2: Efecto de impacto / Acción (se dibuja encima del defensor)
-            fx_renderer = StaticRenderer(images=[effect_sprite])
-            effects.append(Print(screen, fx_renderer, y_pos + 2, max(x_att + 18, x_def - 10), colour=Screen.COLOUR_YELLOW, transparent=True))
-
-            # Capa 3: Letrero de daño o acción
-            if damage > 0:
-                dmg_text = StaticRenderer(images=[f">> -{damage} HP! <<"])
-                effects.append(Print(screen, dmg_text, max(0, y_pos - 1), x_def, colour=Screen.COLOUR_WHITE, bg=Screen.COLOUR_RED, transparent=False))
-            else:
-                act_text = StaticRenderer(images=[f">> {action_name.upper()}! <<"])
-                effects.append(Print(screen, act_text, max(0, y_pos - 1), max(2, (x_att + x_def) // 2 - 6), colour=Screen.COLOUR_CYAN, transparent=True))
-
-            scene = Scene(effects, 24)
+            scene = Scene([CombatChoreography(screen)], total_frames)
             screen.play([scene], stop_on_resize=True, repeat=False)
 
         Screen.wrapper(_combat)

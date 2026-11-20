@@ -228,7 +228,7 @@ def combos_(jugador, oponente):
     if ok:
         try:
             from ui.animations import play_combat_animation
-            play_combat_animation(jugador.nombre, oponente.nombre, resultado.get('tipo', 'Combo'), dano, is_special=False)
+            play_combat_animation(jugador.nombre, oponente.nombre, resultado.get('ataque', resultado.get('tipo', 'Combo')), dano, is_special=False)
         except Exception:
             pass
         console.print(f"\n[cyan]{msg}[/cyan]")
@@ -340,7 +340,7 @@ def especiales_(jugador, oponente):
     if ok:
         try:
             from ui.animations import play_combat_animation
-            play_combat_animation(jugador.nombre, oponente.nombre, resultado.get('tipo', 'Ultimate'), dano, is_special=True)
+            play_combat_animation(jugador.nombre, oponente.nombre, resultado.get('ataque', resultado.get('tipo', 'Ultimate')), dano, is_special=True)
         except Exception:
             pass
         console.print(f"\n[cyan]{msg}[/cyan]")

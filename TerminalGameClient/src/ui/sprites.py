@@ -446,6 +446,58 @@ SPRITES_EFECTOS = {
 }
 
 
+def draw_sprite_asciimatics(screen, nombre: str, x: int, y: int, facing: str = "right", pose: str = "idle", flash_colour=None):
+    """
+    Dibuja el sprite chibi 16x20 directamente en una pantalla de Asciimatics
+    en las coordenadas (x, y) con transparencia real y soporte de flash de impacto.
+    """
+    grid = _get_pixel_grid(nombre, facing=facing, pose=pose)
+    paleta = PALETAS.get(nombre, PALETAS['Naruto'])
+    max_h = screen.height
+    max_w = screen.width
+
+    for row_idx, py in enumerate(range(0, len(grid), 2)):
+        sy = y + row_idx
+        if sy < 0 or sy >= max_h:
+            continue
+        top_row = grid[py]
+        bot_row = grid[py + 1] if py + 1 < len(grid) else "." * len(top_row)
+
+        for col_idx in range(len(top_row)):
+            sx = x + col_idx
+            if sx < 0 or sx >= max_w:
+                continue
+            t_ch = top_row[col_idx]
+            b_ch = bot_row[col_idx]
+            t_info = paleta[t_ch][1] if t_ch in paleta else None
+            b_info = paleta[b_ch][1] if b_ch in paleta else None
+
+            if t_info is None and b_info is None:
+                continue
+
+            if flash_colour is not None:
+                if t_info is not None and b_info is None:
+                    screen.print_at("▀", sx, sy, colour=flash_colour, attr=1, bg=0)
+                elif t_info is None and b_info is not None:
+                    screen.print_at("▄", sx, sy, colour=flash_colour, attr=1, bg=0)
+                else:
+                    screen.print_at("█", sx, sy, colour=flash_colour, attr=1, bg=0)
+            else:
+                if t_info is not None and b_info is None:
+                    fg, attr = t_info
+                    screen.print_at("▀", sx, sy, colour=fg, attr=attr, bg=0)
+                elif t_info is None and b_info is not None:
+                    fg, attr = b_info
+                    screen.print_at("▄", sx, sy, colour=fg, attr=attr, bg=0)
+                elif t_info == b_info:
+                    fg, attr = t_info
+                    screen.print_at("█", sx, sy, colour=fg, attr=attr, bg=0)
+                else:
+                    tfg, tattr = t_info
+                    bfg, _ = b_info
+                    screen.print_at("▀", sx, sy, colour=tfg, attr=tattr, bg=bfg)
+
+
 def get_effect_sprite(tipo: str) -> str:
     """Devuelve el sprite ASCII del efecto."""
     return SPRITES_EFECTOS.get(tipo, SPRITES_EFECTOS['atacar'])
