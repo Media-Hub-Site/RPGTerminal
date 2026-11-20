@@ -44,27 +44,51 @@ class Personaje:
             'msg': f'{self.nombre} ha realizado un {ataque} y hace {self.dano} de daño a {rival.nombre}',
         }
     
+    @staticmethod
     def mostrar_estado(jugador, oponente, vida_maxima_j, vida_maxima_o):
-        # Use a grid table to show both players stats side-by-side
-        grid = Table.grid(expand=True)
-        grid.add_column(justify="center")
-        grid.add_column(justify="center")
+        from ui.sprites import get_sprite
 
-        left = (
-            f"[bold cyan]{jugador.nombre}[/bold cyan]\n"
-            f"❤️  Vida: [green]{jugador.vida}/{vida_maxima_j}[/green]\n"
-            f"🔋 Stamina: [yellow]{jugador.stamina}[/yellow]\n"
-            f"⚔️ Poder: [magenta]{jugador.poder}[/magenta]"
-        )
-        right = (
-            f"[bold cyan]{oponente.nombre}[/bold cyan]\n"
-            f"❤️  Vida: [green]{oponente.vida}/{vida_maxima_o}[/green]\n"
-            f"🔋 Stamina: [yellow]{oponente.stamina}[/yellow]\n"
-            f"⚔️ Poder: [magenta]{oponente.poder}[/magenta]"
+        def make_bar(current, maximum, length=10):
+            ratio = max(0.0, min(1.0, current / maximum)) if maximum > 0 else 0.0
+            filled = int(ratio * length)
+            empty = length - filled
+            return "█" * filled + "░" * empty
+
+        bar_j = make_bar(jugador.vida, vida_maxima_j)
+        bar_o = make_bar(oponente.vida, vida_maxima_o)
+
+        sprite_j = get_sprite(jugador.nombre).split('\n')
+        sprite_o = get_sprite(oponente.nombre).split('\n')
+        max_lines = max(len(sprite_j), len(sprite_o))
+
+        arena = Table.grid(expand=True)
+        arena.add_column(justify="center", ratio=5)
+        arena.add_column(justify="center", ratio=2)
+        arena.add_column(justify="center", ratio=5)
+
+        arena.add_row(
+            f"[bold cyan]▶ {jugador.nombre} (TÚ)[/bold cyan]",
+            "[bold red]⚔️  VS  ⚔️[/bold red]",
+            f"[bold magenta]{oponente.nombre} (RIVAL) ◀[/bold magenta]"
         )
 
-        grid.add_row(left, right)
-        console.print(Panel(grid, title="Estado", border_style="blue"))
+        for i in range(max_lines):
+            line_j = sprite_j[i] if i < len(sprite_j) else ""
+            line_o = sprite_o[i] if i < len(sprite_o) else ""
+            mid = "[yellow]• • •[/yellow]" if i == max_lines // 2 else " "
+            arena.add_row(f"[cyan]{line_j}[/cyan]", mid, f"[magenta]{line_o}[/magenta]")
+
+        stats_j = (
+            f"❤️  HP: [green]{bar_j}[/green] {int(jugador.vida)}/{vida_maxima_j}\n"
+            f"🔋 SP: [yellow]{jugador.stamina}[/yellow] | ⚔️ ATK: [magenta]{jugador.poder}[/magenta]"
+        )
+        stats_o = (
+            f"❤️  HP: [green]{bar_o}[/green] {int(oponente.vida)}/{vida_maxima_o}\n"
+            f"🔋 SP: [yellow]{oponente.stamina}[/yellow] | ⚔️ ATK: [magenta]{oponente.poder}[/magenta]"
+        )
+
+        arena.add_row(stats_j, " ", stats_o)
+        console.print(Panel(arena, title="[bold yellow]CAMPO DE BATALLA RPG[/bold yellow]", border_style="bright_blue"))
 
 
     def esperar(self):

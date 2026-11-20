@@ -80,3 +80,34 @@ def test_combos_and_specials():
 
 if __name__ == "__main__":
     test_combos_and_specials()
+
+
+def test_ui_sprites_and_animations():
+    from ui.sprites import SPRITES_PERSONAJES, SPRITES_EFECTOS, get_sprite, get_effect_sprite
+    from ui.animations import CONFIG_ANIMACIONES, set_efectos_extra, set_animaciones_activas, render_rich_combat_frame
+
+    # Validar que todos los personajes tengan sprite con líneas uniformes
+    personajes = ['Naruto', 'Sasuke', 'Goku', 'Vegeta', 'Ichigo', 'Aizen', 'Kyo', 'Iori', 'Kazuha', 'Alhacen']
+    for p in personajes:
+        sp = get_sprite(p)
+        assert sp is not None and len(sp) > 0, f"Sprite de {p} no debe ser vacío"
+        lines = sp.split('\n')
+        assert len(lines) >= 9, f"Sprite de {p} debe tener al menos 9 líneas, tiene {len(lines)}"
+
+    # Validar efectos
+    for ef in ['atacar', 'esperar', 'esquivar', 'combo', 'ulti']:
+        s_ef = get_effect_sprite(ef)
+        assert s_ef is not None and len(s_ef) > 0
+
+    # Validar configuración de efectos_extra
+    set_efectos_extra(False)
+    assert CONFIG_ANIMACIONES['efectos_extra'] is False
+    set_efectos_extra(True)
+    assert CONFIG_ANIMACIONES['efectos_extra'] is True
+
+    # Validar renderizado de frame Rich sin excepciones
+    render_rich_combat_frame('Naruto', 'Sasuke', 'Chidori', 45)
+    print("test_ui_sprites_and_animations: OK")
+
+if __name__ == "__main__":
+    test_ui_sprites_and_animations()

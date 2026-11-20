@@ -103,8 +103,14 @@ def resultado(jugador_nombre, oponente_nombre, jugador_vida, oponente_vida):
     oponente_gana = oponente_vida > 0 and jugador_vida <= 0
 
     if jugador_gana or oponente_gana:
-        console.print(f"\n[green][!{jugador_nombre if jugador_gana else oponente_nombre}¡][/green]\n")   #<---------------------------- este texto es verde
-        sonido_win(jugador_nombre if jugador_gana else oponente_nombre)
+        winner = jugador_nombre if jugador_gana else oponente_nombre
+        try:
+            from ui.animations import play_victory_animation
+            play_victory_animation(winner)
+        except Exception:
+            pass
+        console.print(f"\n[green][!{winner}¡][/green]\n")
+        sonido_win(winner)
         time.sleep(2.5)
         return True if jugador_gana else False
 

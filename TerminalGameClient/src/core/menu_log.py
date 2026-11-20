@@ -44,7 +44,7 @@ def Juego():
 
 
 def MenuLogic(jugador, oponente, vida_maxima_j, vida_maxima_o):
-    from ui.menu_ui import menu_UI
+    from ui.menu_ui import menu_UI, opciones_UI
     c = None
     while True: 
         menu_UI(jugador, oponente, vida_maxima_j, vida_maxima_o)
@@ -68,6 +68,8 @@ def MenuLogic(jugador, oponente, vida_maxima_j, vida_maxima_o):
                     tienda_(jugador)
                 case 'e' | 'E': #JUGADOR INGRESA A SU MOCHILA
                     mochila_(jugador)
+                case 'o' | 'O': #OPCIONES Y CONFIGURACIÓN DE EFECTOS
+                    opciones_UI()
                 case 7: #JUGADOR ESQUIVA Y OPONENTE ELIGE ACCIÓN
                     c = esquivar_(jugador, oponente)
                 case _:
@@ -93,28 +95,37 @@ def atacar_(jugador, oponente):
     dano = resultado['dano']
 
     if ok:
+        try:
+            from ui.animations import play_combat_animation
+            play_combat_animation(jugador.nombre, oponente.nombre, 'Ataque Básico', dano, is_special=False)
+        except Exception:
+            pass
         console.print(Panel(f"{msg}", title="Éxito", style="green"))
-        time.sleep(2)
+        time.sleep(1.5)
     else:
         console.print(Panel(f"{msg}", title="Error", style="red"))
-        time.sleep(2)
+        time.sleep(1.5)
         return
-
 
     c = comprobar(jugador, oponente)
     if c:
         return True
 
-    
     resultado_ = oponente.elegir_accion(jugador, dano)
     ok_ = resultado_['ok']
     msg_ = resultado_['msg']
+    dano_ = resultado_.get('dano', 0)
     if ok_:
+        if dano_ > 0:
+            try:
+                from ui.animations import play_combat_animation
+                play_combat_animation(oponente.nombre, jugador.nombre, resultado_.get('ataque', 'Ataque'), dano_, is_special=False)
+            except Exception:
+                pass
         console.print(f'\n[yellow]{msg_}[/yellow]')
     else:
         console.print(f'\n[red]{msg_}[/red]')
-    time.sleep(2)
-    
+    time.sleep(1.5)
 
     c = comprobar(jugador, oponente)
     if c:
@@ -138,11 +149,18 @@ def esperar_(jugador, oponente):
     resultado_ = oponente.elegir_accion(jugador, dano)
     ok_ = resultado_['ok']
     msg_ = resultado_['msg']
+    dano_ = resultado_.get('dano', 0)
     if ok_:
+        if dano_ > 0:
+            try:
+                from ui.animations import play_combat_animation
+                play_combat_animation(oponente.nombre, jugador.nombre, resultado_.get('ataque', 'Ataque'), dano_, is_special=False)
+            except Exception:
+                pass
         console.print(f'\n[yellow]{msg_}[/yellow]')
     else:
         console.print(f'\n[red]{msg_}[/red]')
-    time.sleep(2)
+    time.sleep(1.5)
 
     c = comprobar(jugador, oponente)
     if c:
@@ -172,27 +190,37 @@ def combos_(jugador, oponente):
     msg = resultado['msg']
     dano = resultado['dano']
     if ok:
+        try:
+            from ui.animations import play_combat_animation
+            play_combat_animation(jugador.nombre, oponente.nombre, resultado.get('tipo', 'Combo'), dano, is_special=False)
+        except Exception:
+            pass
         console.print(f"\n[cyan]{msg}[/cyan]")
-        time.sleep(2)
+        time.sleep(1.5)
     else:
         console.print(f'\n[red]{msg}[/red]')
-        time.sleep(2)
+        time.sleep(1.5)
         return
-
 
     c = comprobar(jugador, oponente)
     if c:
         return True
 
-    
     resultado_ = oponente.elegir_accion(jugador, dano)
     ok_ = resultado_['ok']
     msg_ = resultado_['msg']
+    dano_ = resultado_.get('dano', 0)
     if ok_:
+        if dano_ > 0:
+            try:
+                from ui.animations import play_combat_animation
+                play_combat_animation(oponente.nombre, jugador.nombre, resultado_.get('ataque', 'Ataque'), dano_, is_special=False)
+            except Exception:
+                pass
         console.print(Panel(f"{msg_}", title="Acción oponente", style="yellow"))
     else:
         console.print(Panel(f"{msg_}", title="Error", style="red"))
-    time.sleep(2)
+    time.sleep(1.5)
 
 
     c = comprobar(jugador, oponente)
@@ -278,11 +306,16 @@ def especiales_(jugador, oponente):
     dano = resultado['dano']
 
     if ok:
+        try:
+            from ui.animations import play_combat_animation
+            play_combat_animation(jugador.nombre, oponente.nombre, resultado.get('tipo', 'Ultimate'), dano, is_special=True)
+        except Exception:
+            pass
         console.print(f"\n[cyan]{msg}[/cyan]")
-        time.sleep(2)
+        time.sleep(1.5)
     else:
         console.print(f'\n[red]{msg}[/red]')
-        time.sleep(2)
+        time.sleep(1.5)
         return
 
 
@@ -297,11 +330,18 @@ def especiales_(jugador, oponente):
     resultado_ = oponente.elegir_accion(jugador, dano)
     ok_ = resultado_['ok']
     msg_ = resultado_['msg']
+    dano_ = resultado_.get('dano', 0)
     if ok_:
+        if dano_ > 0:
+            try:
+                from ui.animations import play_combat_animation
+                play_combat_animation(oponente.nombre, jugador.nombre, resultado_.get('ataque', 'Ataque'), dano_, is_special=False)
+            except Exception:
+                pass
         console.print(f'\n[yellow]{msg_}[/yellow]')
     else:
         console.print(f'\n[red]{msg_}[/red]')
-    time.sleep(2)
+    time.sleep(1.5)
 
 
     c = comprobar(jugador, oponente)

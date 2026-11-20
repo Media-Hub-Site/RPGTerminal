@@ -7,9 +7,11 @@ def bienvenida():
     try:
         os.system("cls")
         UI_MAP['intro']()
+        from ui.animations import play_intro_animation
+        play_intro_animation()
         console.print("[yellow] *** Bienvenido al juego RPG *** [/yellow]\n")
         enter = input("   Presiona enter para empezar\n")
-    except ValueError:
+    except (ValueError, Exception):
         pass
 
 def volver_a_jugar_UI():
@@ -114,6 +116,7 @@ def menu_UI(jugador, oponente, vida_maxima_j, vida_maxima_o):
     opts.add_row("2", "Esperar [+15 stamina y +15 vida]")
     opts.add_row("T", "Tienda")
     opts.add_row("E", "Mochila")
+    opts.add_row("O", "Opciones visuales / Efectos")
 
     console.print(Panel(opts, title="Opciones", border_style="green"))
 
@@ -125,5 +128,28 @@ def menu_UI(jugador, oponente, vida_maxima_j, vida_maxima_o):
         console.print("[blue]╚══════════════════════════════════════════════════╝[/blue]")
     else:
         console.print("[red]⚠ Este personaje no tiene habilidades definidas.[/red]")
+
+
+def opciones_UI():
+    from ui.animations import CONFIG_ANIMACIONES, set_efectos_extra, set_animaciones_activas
+    os.system("cls")
+    console.print(Panel("[bold yellow]CONFIGURACIÓN DE EFECTOS Y GRÁFICOS[/bold yellow]", border_style="yellow"))
+
+    estado_anim = "ACTIVADAS (Asciimatics + Rich)" if CONFIG_ANIMACIONES['animaciones_activas'] else "DESACTIVADAS"
+    estado_extra = "ACTIVADOS (Partículas y Estrellas)" if CONFIG_ANIMACIONES['efectos_extra'] else "DESACTIVADOS (Modo limpio)"
+
+    console.print(f"\n1. Animaciones visuales: [cyan]{estado_anim}[/cyan]")
+    console.print(f"2. Modo de efectos extra: [cyan]{estado_extra}[/cyan]")
+    console.print("0. Volver al combate\n")
+
+    opc = input("Elige una opción a alternar (1, 2 o 0): ").strip()
+    if opc == "1":
+        set_animaciones_activas(not CONFIG_ANIMACIONES['animaciones_activas'])
+        console.print("[green]Ajuste de animaciones actualizado.[/green]")
+        time.sleep(1)
+    elif opc == "2":
+        set_efectos_extra(not CONFIG_ANIMACIONES['efectos_extra'])
+        console.print("[green]Ajuste de efectos extra actualizado.[/green]")
+        time.sleep(1)
 
         

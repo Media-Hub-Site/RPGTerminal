@@ -10,6 +10,11 @@ Incluye soporte para renderizado enriquecido con **Rich**, efectos de sonido y v
 
 ## 🎮 Características
 
+* **Motor Visual y Animaciones en Consola**:
+  * Sprites retro elaborados en ASCII con sombreado de densidad progresiva (`░, ▒, ▓, █`).
+  * Integración con **Asciimatics** para animaciones dinámicas de intro, impactos, proyectiles y victorias con capas transparentes (`transparent=True`).
+  * Campo de batalla visual con luchadores enfrentados cara a cara y barras de vida/estamina renderizadas en tiempo real.
+  * Modo de efectos opcional (`efectos_extra`): Partículas y estrellas activables/desactivables desde el menú de opciones (Tecla `O`).
 * **Combate por Turnos Dinámico**: Atacar, combos especiales, ultimates, esquivar y descansar.
 * **Inteligencia Artificial Equilibrada**: Toma de decisiones del oponente según recursos de estamina, con fallbacks automáticos sin bloqueos.
 * **10+ Personajes Jugables**:
