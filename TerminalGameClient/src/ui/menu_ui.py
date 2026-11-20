@@ -9,9 +9,7 @@ def bienvenida():
         UI_MAP['intro']()
         from ui.animations import play_intro_animation
         play_intro_animation()
-        console.print("[yellow] *** Bienvenido al juego RPG *** [/yellow]\n")
-        enter = input("   Presiona enter para empezar\n")
-    except (ValueError, Exception):
+    except Exception:
         pass
 
 def volver_a_jugar_UI():
@@ -24,18 +22,45 @@ def volver_a_jugar_UI():
 
     
 def eleccion_UI():
+    from ui.sprites import render_sprite_rich
+    from rich.table import Table
     os.system("cls")
-    console.print(f"[bold yellow]Elige tu Personaje:[/bold yellow]\n")
 
-    console.print(f"""[cyan]
-1. Naruto                 6. Kazuha   
-2. Sasuke                 7. Vegeta     
-3. Iori                   8. Alhacen  
-4. Kyo                    9. Goku     
-5. Ichigo                10. Aizen
-[/cyan]""")
-    
-    console.print(f"\n[green]0. Elegir aleatoriamente[/green]")
+    # Matriz con los 10 personajes en 2 filas de 5 columnas
+    personajes_fila1 = [
+        ("1", "Naruto", "Viento"),
+        ("2", "Sasuke", "Fuego"),
+        ("3", "Goku", "Ki"),
+        ("4", "Vegeta", "Ki"),
+        ("5", "Ichigo", "Espíritu"),
+    ]
+    personajes_fila2 = [
+        ("6", "Aizen", "Kido"),
+        ("7", "Kyo", "Fuego"),
+        ("8", "Iori", "Llama"),
+        ("9", "Kazuha", "Anemo"),
+        ("10", "Alhacen", "Dendro"),
+    ]
+
+    grid = Table.grid(padding=(0, 2), expand=True)
+    for _ in range(5):
+        grid.add_column(justify="center", ratio=1)
+
+    # Fila 1: Sprites, nombres y elementos
+    sprites_f1 = [render_sprite_rich(name, facing="right", pose="idle") for _, name, _ in personajes_fila1]
+    labels_f1 = [f"[bold yellow]{num}.[/bold yellow] [bold white]{name}[/bold white]\n[cyan]<{elem}>[/cyan]" for num, name, elem in personajes_fila1]
+    grid.add_row(*sprites_f1)
+    grid.add_row(*labels_f1)
+    grid.add_row("", "", "", "", "")  # Espaciado
+
+    # Fila 2: Sprites, nombres y elementos
+    sprites_f2 = [render_sprite_rich(name, facing="right", pose="idle") for _, name, _ in personajes_fila2]
+    labels_f2 = [f"[bold yellow]{num}.[/bold yellow] [bold white]{name}[/bold white]\n[cyan]<{elem}>[/cyan]" for num, name, elem in personajes_fila2]
+    grid.add_row(*sprites_f2)
+    grid.add_row(*labels_f2)
+
+    console.print(Panel(grid, title="[bold yellow]⚔️ ELIGE TU LUCHADOR ⚔️[/bold yellow]", border_style="bright_blue"))
+    console.print("[green]0. 🎲 Elegir aleatoriamente[/green]".center(75))
 
 
 def menu_UI(jugador, oponente, vida_maxima_j, vida_maxima_o):

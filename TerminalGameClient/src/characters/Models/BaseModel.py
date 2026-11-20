@@ -150,21 +150,21 @@ class Personaje:
                 case 2:
                     return characters_dict['Sasuke'].__class__()
                 case 3:
-                    return characters_dict['Iori'].__class__()
+                    return characters_dict['Goku'].__class__()
                 case 4:
-                    return characters_dict['Kyo'].__class__()
+                    return characters_dict['Vegeta'].__class__()
                 case 5:
                     return characters_dict['Ichigo'].__class__()
                 case 6:
-                    return characters_dict['Kazuha'].__class__()
-                case 7:
-                    return characters_dict['Vegeta'].__class__()
-                case 8:
-                    return characters_dict['Alhacen'].__class__()
-                case 9:
-                    return characters_dict['Goku'].__class__()
-                case 10:
                     return characters_dict['Aizen'].__class__()
+                case 7:
+                    return characters_dict['Kyo'].__class__()
+                case 8:
+                    return characters_dict['Iori'].__class__()
+                case 9:
+                    return characters_dict['Kazuha'].__class__()
+                case 10:
+                    return characters_dict['Alhacen'].__class__()
                 case _:
                     ERRORS['ERROR']()
         except ValueError as e:

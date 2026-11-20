@@ -35,7 +35,13 @@ def set_animaciones_activas(habilitado: bool):
 
 
 def play_intro_animation():
-    """Reproduce la animación de bienvenida con título Figlet y estrellas."""
+    """
+    Reproduce la pantalla de título completa con Asciimatics:
+    - Logo gigante con tipografía Figlet + estrellas/partículas
+    - Subtítulo oficial MediaHub
+    - Texto interactivo animado: '[ Presiona ENTER para comenzar ]'
+    - Espera la pulsación de ENTER/Espacio directamente dentro de la animación
+    """
     if not CONFIG_ANIMACIONES['animaciones_activas']:
         return
 
@@ -44,30 +50,46 @@ def play_intro_animation():
         from asciimatics.scene import Scene
         from asciimatics.effects import Stars, Print
         from asciimatics.renderers import FigletText, StaticRenderer
+        from asciimatics.event import KeyboardEvent
 
         def _scene(screen):
             effects = []
             if CONFIG_ANIMACIONES['efectos_extra']:
-                effects.append(Stars(screen, 40))
+                effects.append(Stars(screen, 45))
 
             title_renderer = FigletText("RPG TERMINAL", font="slant")
             sub_renderer = StaticRenderer(["═══ MEDIAHUB RETRO BATTLE EDITION ═══"])
+            enter_prompt = StaticRenderer(["[ Presiona ENTER o ESPACIO para empezar ]"])
 
             x_title = max(1, (screen.width - 60) // 2)
-            y_title = max(1, (screen.height - 12) // 2)
+            y_title = max(1, (screen.height - 14) // 2)
 
             effects.append(Print(screen, title_renderer, y_title, x_title, colour=Screen.COLOUR_CYAN, transparent=True))
             effects.append(Print(screen, sub_renderer, y_title + 8, max(1, (screen.width - 37) // 2), colour=Screen.COLOUR_YELLOW, transparent=True))
+            effects.append(Print(screen, enter_prompt, y_title + 11, max(1, (screen.width - 42) // 2), colour=Screen.COLOUR_GREEN, transparent=True))
 
-            scene = Scene(effects, 35)
-            screen.play([scene], stop_on_resize=True, repeat=False)
+            scene = Scene(effects, -1)  # -1 = duración indefinida hasta que el usuario presione tecla
+
+            def check_key(event):
+                if isinstance(event, KeyboardEvent):
+                    if event.key_code in (10, 13, 32):  # Enter o Espacio
+                        raise SystemExit(0)
+                return event
+
+            try:
+                screen.play([scene], stop_on_resize=True, repeat=True, unhandled_input=check_key)
+            except SystemExit:
+                pass
 
         Screen.wrapper(_scene)
     except Exception:
-        # Fallback elegante usando Rich
+        # Fallback si el entorno no admite pantalla completa
         console.rule("[bold cyan]⚔️ RPG TERMINAL ⚔️[/bold cyan]")
         console.print("[yellow]═══ MEDIAHUB RETRO BATTLE EDITION ═══[/yellow]".center(70))
-        time.sleep(1)
+        try:
+            input("\n   Presiona ENTER para empezar...")
+        except Exception:
+            pass
 
 
 def play_combat_animation(attacker_name: str, defender_name: str, action_name: str, damage: int, is_special: bool = False):
