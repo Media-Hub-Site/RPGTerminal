@@ -11,7 +11,7 @@ import sys
 import os
 import time
 from typing import List, Tuple, Any, Optional
-from utils.console import console
+from utils.console import console, clear_screen
 from rich.table import Table
 from rich.panel import Panel
 from rich.live import Live
