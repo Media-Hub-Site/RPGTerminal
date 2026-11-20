@@ -206,95 +206,129 @@ def select_menu_option(
 def select_character_grid() -> int:
     """
     Selector visual de personajes estilo galería interactiva con flechas y ENTER.
-    Totalmente responsivo: adapta el número de columnas (5, 3 o 2) según el ancho
-    real de la terminal para evitar desbordes y barras de desplazamiento horizontales.
-    Retorna el número de personaje elegido (1 a 10, o 0 para aleatorio).
+    Diseño de 2 paneles (Split-View):
+    - Izquierda: Vista previa grande en tiempo real del luchador con sprite chibi OMORI,
+      pose animada y detalles elementales.
+    - Derecha: Matriz compacta de selección de luchadores.
+    Todo el contenido cabe limpiamente en ~22 líneas verticales (pantalla completa o pequeña),
+    y utiliza actualización ANSI fluida para evitar parpadeos molestos al moverte.
     """
     import shutil
     from ui.sprites import render_sprite_rich
 
     personajes = [
-        (1, "Naruto", "Viento"),
-        (2, "Sasuke", "Fuego"),
-        (3, "Goku", "Ki"),
-        (4, "Vegeta", "Ki"),
-        (5, "Ichigo", "Espíritu"),
-        (6, "Aizen", "Kido"),
-        (7, "Kyo", "Fuego"),
-        (8, "Iori", "Llama"),
-        (9, "Kazuha", "Anemo"),
-        (10, "Alhacen", "Dendro"),
-        (0, "🎲 Aleatorio", "Azar"),
+        (1, "Naruto", "Viento", "Rasengan / Shuriken"),
+        (2, "Sasuke", "Fuego", "Chidori / Raikiri"),
+        (3, "Goku", "Ki", "Kamehameha / SSJ"),
+        (4, "Vegeta", "Ki", "Garlick Gun / SSJ"),
+        (5, "Ichigo", "Espíritu", "Getsuga / Bankai"),
+        (6, "Aizen", "Kido", "Kido / Kyokasuigetsu"),
+        (7, "Kyo", "Fuego", "Combos / Llamas"),
+        (8, "Iori", "Llama", "Fuego Púrpura / Especial"),
+        (9, "Kazuha", "Anemo", "Torbellino Otoñal"),
+        (10, "Alhacen", "Dendro", "Espejos Prismáticos"),
+        (0, "🎲 Aleatorio", "Azar", "Luchador sorpresa"),
     ]
 
     indice = 0
     reader = InputReader()
+    first_render = True
 
     try:
         while True:
-            os.system("cls")
+            # Reubicar cursor arriba suavemente para evitar parpadeos de cls completo
+            if first_render:
+                os.system("cls")
+                first_render = False
+            else:
+                sys.stdout.write("\033[H")
+                sys.stdout.flush()
+
             term_cols = shutil.get_terminal_size((100, 30)).columns
 
-            # Determinar columnas responsivas
-            if term_cols >= 115:
-                num_cols = 5
-            elif term_cols >= 75:
-                num_cols = 3
+            sel_num, sel_name, sel_elem, sel_spec = personajes[indice]
+
+            # ---------------- Panel Izquierdo: Vista Previa ----------------
+            prev_table = Table.grid(expand=True)
+            prev_table.add_column(justify="center")
+
+            if sel_num == 0:
+                sprite_prev = Panel("[bold yellow]🎲\n\n?[/bold yellow]", padding=(3, 4), border_style="green")
+                prev_table.add_row(sprite_prev)
+                prev_table.add_row("[bold green]LUCHADOR SORPRESA[/bold green]")
+                prev_table.add_row("[dim cyan]Selección aleatoria[/dim cyan]")
+                prev_table.add_row("[dim yellow]¡Cualquiera puede tocar![/dim yellow]")
             else:
-                num_cols = 2
+                sprite_prev = render_sprite_rich(sel_name, facing="right", pose="attack")
+                prev_table.add_row(sprite_prev)
+                prev_table.add_row(f"[bold yellow]{sel_name}[/bold yellow]")
+                prev_table.add_row(f"[cyan]<{sel_elem}>[/cyan]")
+                prev_table.add_row(f"[dim yellow]Técnicas: {sel_spec}[/dim yellow]")
 
-            grid = Table.grid(padding=(0, 1), expand=True)
-            for _ in range(num_cols):
-                grid.add_column(justify="center", ratio=1)
+            prev_panel = Panel(prev_table, title="[bold cyan]VISTA PREVIA[/bold cyan]", border_style="bright_cyan", padding=(0, 1))
 
-            # Construir tarjetas para los 10 personajes (0 a 9)
-            cards = []
-            for i in range(10):
-                num, name, elem = personajes[i]
-                is_sel = (i == indice)
-                sprite = render_sprite_rich(name, facing="right", pose="attack" if is_sel else "idle")
-                title = f"[bold black on yellow] {num}. {name} [/bold black on yellow]" if is_sel else f"[bold white]{num}. {name}[/bold white]"
-                card_content = Table.grid(expand=True)
-                card_content.add_column(justify="center")
-                card_content.add_row(sprite)
-                card_content.add_row(title)
-                card_content.add_row(f"[cyan]<{elem}>[/cyan]")
-                card_panel = Panel(card_content, border_style="bright_yellow" if is_sel else "grey50", padding=(0, 0))
-                cards.append(card_panel)
+            # ---------------- Panel Derecho: Lista de Luchadores ----------------
+            list_table = Table.grid(padding=(0, 1), expand=True)
+            list_table.add_column(ratio=1)
+            list_table.add_column(ratio=1)
 
-            # Distribuir tarjetas en filas según num_cols
-            for r in range(0, 10, num_cols):
-                row_items = cards[r:r + num_cols]
-                while len(row_items) < num_cols:
-                    row_items.append("")
-                grid.add_row(*row_items)
+            for r in range(0, 10, 2):
+                row_panels = []
+                for c in range(2):
+                    num, name, elem, _ = personajes[r + c]
+                    is_sel = (r + c == indice)
+                    if is_sel:
+                        btn = f"[bold black on yellow] ▶ [{num}] {name} ◀ [/bold black on yellow] [bold bright_yellow]<{elem}>[/bold bright_yellow]"
+                        border_style = "bright_yellow"
+                    else:
+                        btn = f"[bold white][{num}] {name}[/bold white] [dim]<{elem}>[/dim]"
+                        border_style = "grey50"
+                    p = Panel(btn, border_style=border_style, padding=(0, 1))
+                    row_panels.append(p)
+                list_table.add_row(*row_panels)
 
-            console.print(Panel(grid, title="[bold yellow]⚔️ ELIGE TU LUCHADOR (Flechas + ENTER) ⚔️[/bold yellow]", border_style="bright_blue"))
-
-            # Opción 0 Aleatorio
+            # Opción 0 Aleatorio en la lista
             is_rndm_sel = (indice == 10)
-            rndm_style = "bold black on yellow" if is_rndm_sel else "green"
-            console.print(f"[{rndm_style}] [0] 🎲 Elegir aleatoriamente [/{rndm_style}]".center(min(term_cols, 100)))
-            console.print("[dim cyan]🠄 🠆 🠅 🠇 Flechas/WASD para moverte | [ENTER] Elegir | [0-9] Atajo directo[/dim cyan]".center(min(term_cols, 100)))
+            if is_rndm_sel:
+                rndm_btn = "[bold black on yellow] ▶ [0] 🎲 Elegir aleatoriamente ◀ [/bold black on yellow]"
+                rndm_border = "bright_yellow"
+            else:
+                rndm_btn = "[bold green][0] 🎲 Elegir aleatoriamente[/bold green]"
+                rndm_border = "green"
+            list_table.add_row(Panel(rndm_btn, border_style=rndm_border, padding=(0, 1)), "")
+
+            list_panel = Panel(list_table, title="[bold yellow]SELECCIONA TU LUCHADOR[/bold yellow]", border_style="bright_blue", padding=(0, 1))
+
+            # Contenedor maestro en Split-View
+            layout = Table.grid(padding=(0, 2), expand=True)
+            layout.add_column(ratio=2, justify="center")
+            layout.add_column(ratio=4)
+            layout.add_row(prev_panel, list_panel)
+
+            console.print(Panel(layout, title="[bold yellow]⚔️ MENÚ DE SELECCIÓN DE LUCHADOR ⚔️[/bold yellow]", border_style="bright_blue", padding=(0, 1)))
+            console.print("[dim cyan]🠄 🠆 🠅 🠇 Flechas o WASD para moverte | [ENTER/Espacio] Elegir | [0-9] Atajo directo[/dim cyan]".center(min(term_cols, 100)))
 
             event_type, event_val = reader.read_event()
 
             if event_type == 'UP':
                 if indice == 10:
-                    indice = max(0, 10 - num_cols)
-                elif indice >= num_cols:
-                    indice -= num_cols
+                    indice = 8  # Subir desde aleatorio a fila previa
+                elif indice >= 2:
+                    indice -= 2
                 else:
                     indice = 10
             elif event_type == 'DOWN':
                 if indice == 10:
                     indice = 0
-                elif indice + num_cols < 10:
-                    indice += num_cols
+                elif indice + 2 <= 10:
+                    indice += 2
                 else:
                     indice = 10
             elif event_type == 'LEFT':
-                indice = (indice - 1) % 11
+                if indice == 10:
+                    indice = 9
+                else:
+                    indice = (indice - 1) % 11
             elif event_type == 'RIGHT':
                 indice = (indice + 1) % 11
             elif event_type == 'ENTER':
