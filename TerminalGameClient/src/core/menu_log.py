@@ -31,11 +31,10 @@ def Juego():
         # Menú RPG interactivo
         MenuLogic(jugador, oponente, vida_maxima_j, vida_maxima_o)
 
-        # Partida Terminada
+        # Partida Terminada con animación de victoria y sonido sincronizado
         result = resultado(jugador.nombre, oponente.nombre, jugador.vida, oponente.vida)
 
-        #Opcion de volver a jugar
-        volver_a_jugar_UI()
+        # Menú moderno interactivo de volver a jugar
         volver_a_jugar(jugador, oponente, result)
     #_________________________________________________
 

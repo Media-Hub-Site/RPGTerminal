@@ -96,9 +96,6 @@ def especiales(self, rival):
 
 
 def resultado(jugador_nombre, oponente_nombre, jugador_vida, oponente_vida):
-    os.system("cls")
-    console.print("El ganador de esta reñida pelea es..")
-    time.sleep(2)
     jugador_gana = oponente_vida <= 0 and jugador_vida > 0
     oponente_gana = oponente_vida > 0 and jugador_vida <= 0
 
@@ -108,11 +105,12 @@ def resultado(jugador_nombre, oponente_nombre, jugador_vida, oponente_vida):
             from ui.animations import play_victory_animation
             play_victory_animation(winner)
         except Exception:
-            pass
-        console.print(f"\n[green][!{winner}¡][/green]\n")
-        sonido_win(winner)
-        time.sleep(2.5)
+            from utils.console import console
+            console.print(f"\n[green][!{winner} es el ganador!][/green]\n")
+            sonido_win(winner)
+            time.sleep(2)
         return True if jugador_gana else False
+    return False
 
         
         

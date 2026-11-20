@@ -599,7 +599,13 @@ def render_rich_combat_frame(attacker_name: str, defender_name: str, action_name
 
 
 def play_victory_animation(winner_name: str):
-    """Reproduce animación de victoria con asciimatics."""
+    """Reproduce animación de victoria con asciimatics y audio sincronizado."""
+    try:
+        from core.eventos import sonido_win
+        sonido_win(winner_name)
+    except Exception:
+        pass
+
     if not CONFIG_ANIMACIONES['animaciones_activas']:
         return
 

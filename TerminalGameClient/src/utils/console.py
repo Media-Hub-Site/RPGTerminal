@@ -13,6 +13,20 @@ console = Console()
 _ORIG_PRINT = builtins.print
 
 
+def clear_screen(full: bool = False) -> None:
+    """
+    Limpia o reposiciona la pantalla de forma completamente fluida.
+    - Por defecto reposiciona el cursor arriba (\033[H\033[J) sin parpadear ni borrar buffer.
+    - Si full=True, limpia todo el buffer de pantalla sin depender de os.system('cls').
+    """
+    import sys
+    if full:
+        sys.stdout.write("\033[2J\033[H")
+    else:
+        sys.stdout.write("\033[H\033[J")
+    sys.stdout.flush()
+
+
 def rprint(*objects: Any, sep: str = " ", end: str = "\n", file=None, **kwargs) -> None:
     """Rich-based replacement for builtin print.
 

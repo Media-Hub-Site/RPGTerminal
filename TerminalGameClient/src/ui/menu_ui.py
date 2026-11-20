@@ -5,7 +5,8 @@ from core import UI_MAP
 
 def bienvenida():
     try:
-        os.system("cls")
+        from utils.console import clear_screen
+        clear_screen(full=True)
         UI_MAP['intro']()
         from ui.animations import play_intro_animation
         play_intro_animation()
@@ -24,7 +25,8 @@ def volver_a_jugar_UI():
 def eleccion_UI():
     from ui.sprites import render_sprite_rich
     from rich.table import Table
-    os.system("cls")
+    from utils.console import clear_screen
+    clear_screen(full=True)
 
     # Matriz con los 10 personajes en 2 filas de 5 columnas
     personajes_fila1 = [

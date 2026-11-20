@@ -3,7 +3,8 @@ from utils.console import console, Table, Panel
 
 
 def Tienda(jugador):
-    os.system("cls")
+    from utils.console import clear_screen
+    clear_screen(full=True)
     console.rule("TIENDA", style="green")
 
     console.print("[green]!Bienvenido¡, ¿que desea llevar?[/green]\n")

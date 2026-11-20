@@ -122,9 +122,17 @@ def select_menu_option(
     indice = max(0, min(indice_inicial, len(opciones) - 1))
     reader = InputReader()
     import shutil
+    from utils.console import clear_screen
+    first_render = True
 
     try:
         while True:
+            # Reubicar cursor arriba fluidamente sin parpadeo de cls
+            if first_render:
+                clear_screen(full=True)
+                first_render = False
+            else:
+                clear_screen(full=False)
             term_cols = shutil.get_terminal_size((100, 30)).columns
 
             # Ajustar columnas de forma responsiva: si la terminal es estrecha (< 70), usar 1 columna
@@ -168,8 +176,6 @@ def select_menu_option(
             for f in botones_filas:
                 grid.add_row(*f)
 
-            # Limpiar y redibujar el panel de opciones
-            os.system("cls")
             if render_header_func:
                 render_header_func()
             elif header_info:
@@ -236,13 +242,12 @@ def select_character_grid() -> int:
 
     try:
         while True:
-            # Reubicar cursor arriba suavemente para evitar parpadeos de cls completo
+            # Reubicar cursor arriba fluidamente sin parpadeos de cls completo
             if first_render:
-                os.system("cls")
+                clear_screen(full=True)
                 first_render = False
             else:
-                sys.stdout.write("\033[H")
-                sys.stdout.flush()
+                clear_screen(full=False)
 
             term_cols = shutil.get_terminal_size((100, 30)).columns
 

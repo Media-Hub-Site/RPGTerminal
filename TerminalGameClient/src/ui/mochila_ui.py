@@ -4,7 +4,8 @@ from core.mochila_log import inventory, Mochila_log
 
 
 def Mochila(jugador):
-    os.system("cls")
+    from utils.console import clear_screen
+    clear_screen(full=True)
     console.rule("MOCHILA", style="green")
     console.print(f"[bold]{len(jugador.mochila)}/10[/bold]       Money: [yellow]{jugador.moneda}[/yellow]\n")
     console.rule(characters="-", style="cyan")
