@@ -12,7 +12,12 @@ import time
 from utils.console import console
 from rich.panel import Panel
 from rich.table import Table
-from ui.sprites import get_sprite, get_effect_sprite
+from ui.sprites import (
+    get_sprite,
+    get_effect_sprite,
+    render_sprite_rich,
+    render_sprite_asciimatics,
+)
 
 # Bandera global para habilitar/deshabilitar efectos extra (partículas, sacudidas)
 CONFIG_ANIMACIONES = {
@@ -81,9 +86,10 @@ def play_combat_animation(attacker_name: str, defender_name: str, action_name: s
         from asciimatics.effects import Print, Stars
         from asciimatics.renderers import StaticRenderer
 
-        attacker_sprite = get_sprite(attacker_name).split('\n')
-        defender_sprite = get_sprite(defender_name).split('\n')
-        effect_sprite = get_effect_sprite('ulti' if is_special else 'atacar').split('\n')
+        att_idle = render_sprite_asciimatics(attacker_name, facing="right", pose="idle")
+        att_attack = render_sprite_asciimatics(attacker_name, facing="right", pose="attack")
+        def_idle = render_sprite_asciimatics(defender_name, facing="left", pose="idle")
+        effect_sprite = get_effect_sprite('ulti' if is_special else 'atacar')
 
         def _combat(screen):
             effects = []
@@ -96,33 +102,33 @@ def play_combat_animation(attacker_name: str, defender_name: str, action_name: s
             h = screen.height
             w = screen.width
 
-            y_pos = max(2, (h - 14) // 2)
-            x_att = max(2, w // 6)
+            y_pos = max(3, (h - 12) // 2)
+            x_att = max(4, w // 6)
             x_def = max(x_att + 26, (w * 4) // 6)
 
-            # Capa 1: Personajes enfrentados
-            att_renderer = StaticRenderer(attacker_sprite)
-            def_renderer = StaticRenderer(defender_sprite)
+            # Capa 1: Personajes chibi pixel-art enfrentados (atacante anima idle -> ataque)
+            att_renderer = StaticRenderer(images=[att_idle, att_attack, att_attack])
+            def_renderer = StaticRenderer(images=[def_idle])
 
-            effects.append(Print(screen, att_renderer, y_pos, x_att, colour=Screen.COLOUR_GREEN, transparent=True))
-            effects.append(Print(screen, def_renderer, y_pos, x_def, colour=Screen.COLOUR_RED, transparent=True))
+            effects.append(Print(screen, att_renderer, y_pos, x_att, speed=4, transparent=True))
+            effects.append(Print(screen, def_renderer, y_pos, x_def, transparent=True))
 
             # Nombres sobre los sprites
-            att_label = StaticRenderer([f"[{attacker_name}]"])
-            def_label = StaticRenderer([f"[{defender_name}]"])
+            att_label = StaticRenderer(images=[f"[{attacker_name}]"])
+            def_label = StaticRenderer(images=[f"[{defender_name}]"])
             effects.append(Print(screen, att_label, max(0, y_pos - 2), x_att + 2, colour=Screen.COLOUR_GREEN, transparent=True))
             effects.append(Print(screen, def_label, max(0, y_pos - 2), x_def + 2, colour=Screen.COLOUR_RED, transparent=True))
 
             # Capa 2: Efecto de impacto / Acción (se dibuja encima del defensor)
-            fx_renderer = StaticRenderer(effect_sprite)
+            fx_renderer = StaticRenderer(images=[effect_sprite])
             effects.append(Print(screen, fx_renderer, y_pos + 2, max(x_att + 18, x_def - 10), colour=Screen.COLOUR_YELLOW, transparent=True))
 
             # Capa 3: Letrero de daño o acción
             if damage > 0:
-                dmg_text = StaticRenderer([f">> -{damage} HP! <<"])
+                dmg_text = StaticRenderer(images=[f">> -{damage} HP! <<"])
                 effects.append(Print(screen, dmg_text, max(0, y_pos - 1), x_def, colour=Screen.COLOUR_WHITE, bg=Screen.COLOUR_RED, transparent=False))
             else:
-                act_text = StaticRenderer([f">> {action_name.upper()}! <<"])
+                act_text = StaticRenderer(images=[f">> {action_name.upper()}! <<"])
                 effects.append(Print(screen, act_text, max(0, y_pos - 1), max(2, (x_att + x_def) // 2 - 6), colour=Screen.COLOUR_CYAN, transparent=True))
 
             scene = Scene(effects, 24)
@@ -135,23 +141,23 @@ def play_combat_animation(attacker_name: str, defender_name: str, action_name: s
 
 
 def render_rich_combat_frame(attacker_name: str, defender_name: str, action_name: str, damage: int):
-    """Renderizado alternativo con Rich mostrando sprites lado a lado."""
-    att_lines = get_sprite(attacker_name).split('\n')
-    def_lines = get_sprite(defender_name).split('\n')
-    max_lines = max(len(att_lines), len(def_lines))
+    """Renderizado alternativo con Rich mostrando sprites chibi pixel-art lado a lado."""
+    att_sprite = render_sprite_rich(attacker_name, facing="right", pose="attack")
+    def_sprite = render_sprite_rich(defender_name, facing="left", pose="idle")
 
     table = Table.grid(expand=True)
-    table.add_column(justify="center", width=25)
-    table.add_column(justify="center", width=20)
-    table.add_column(justify="center", width=25)
+    table.add_column(justify="center", width=22)
+    table.add_column(justify="center", width=22)
+    table.add_column(justify="center", width=22)
 
-    table.add_row(f"[bold green]{attacker_name}[/bold green]", f"[bold yellow]⚔️ {action_name} ⚔️[/bold yellow]", f"[bold red]{defender_name}[/bold red]")
+    table.add_row(
+        f"[bold green]{attacker_name}[/bold green]",
+        f"[bold yellow]⚔️ {action_name} ⚔️[/bold yellow]",
+        f"[bold red]{defender_name}[/bold red]",
+    )
 
-    for i in range(max_lines):
-        line_a = att_lines[i] if i < len(att_lines) else ""
-        line_d = def_lines[i] if i < len(def_lines) else ""
-        mid = f"[bold red]-{damage} HP[/bold red]" if i == max_lines // 2 and damage > 0 else " "
-        table.add_row(f"[green]{line_a}[/green]", mid, f"[red]{line_d}[/red]")
+    mid = f"\n\n\n\n[bold red]-{damage} HP[/bold red]" if damage > 0 else "\n\n\n\n[yellow]⚡[/yellow]"
+    table.add_row(att_sprite, mid, def_sprite)
 
     console.print(Panel(table, border_style="cyan"))
     time.sleep(1.2)
@@ -168,7 +174,8 @@ def play_victory_animation(winner_name: str):
         from asciimatics.effects import Stars, Print
         from asciimatics.renderers import FigletText, StaticRenderer
 
-        winner_sprite = get_sprite(winner_name).split('\n')
+        winner_idle = render_sprite_asciimatics(winner_name, facing="right", pose="idle")
+        winner_attack = render_sprite_asciimatics(winner_name, facing="right", pose="attack")
 
         def _victory(screen):
             effects = []
@@ -176,15 +183,15 @@ def play_victory_animation(winner_name: str):
                 effects.append(Stars(screen, 50))
 
             vic_renderer = FigletText("VICTORIA", font="slant")
-            hero_renderer = StaticRenderer(winner_sprite)
-            label = StaticRenderer([f"★ {winner_name} ES EL GANADOR ★"])
+            hero_renderer = StaticRenderer(images=[winner_idle, winner_attack])
+            label = StaticRenderer(images=[f"★ {winner_name} ES EL GANADOR ★"])
 
             x_vic = max(1, (screen.width - 50) // 2)
             y_vic = 2
-            x_hero = max(1, (screen.width - 20) // 2)
+            x_hero = max(1, (screen.width - 18) // 2)
 
             effects.append(Print(screen, vic_renderer, y_vic, x_vic, colour=Screen.COLOUR_YELLOW, transparent=True))
-            effects.append(Print(screen, hero_renderer, y_vic + 6, x_hero, colour=Screen.COLOUR_GREEN, transparent=True))
+            effects.append(Print(screen, hero_renderer, y_vic + 7, x_hero, speed=5, transparent=True))
             effects.append(Print(screen, label, y_vic + 18, max(1, (screen.width - len(winner_name) - 18) // 2), colour=Screen.COLOUR_CYAN, transparent=True))
 
             scene = Scene(effects, 35)

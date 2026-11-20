@@ -46,7 +46,7 @@ class Personaje:
     
     @staticmethod
     def mostrar_estado(jugador, oponente, vida_maxima_j, vida_maxima_o):
-        from ui.sprites import get_sprite
+        from ui.sprites import render_sprite_rich
 
         def make_bar(current, maximum, length=10):
             ratio = max(0.0, min(1.0, current / maximum)) if maximum > 0 else 0.0
@@ -57,9 +57,8 @@ class Personaje:
         bar_j = make_bar(jugador.vida, vida_maxima_j)
         bar_o = make_bar(oponente.vida, vida_maxima_o)
 
-        sprite_j = get_sprite(jugador.nombre).split('\n')
-        sprite_o = get_sprite(oponente.nombre).split('\n')
-        max_lines = max(len(sprite_j), len(sprite_o))
+        sprite_j = render_sprite_rich(jugador.nombre, facing="right", pose="idle")
+        sprite_o = render_sprite_rich(oponente.nombre, facing="left", pose="idle")
 
         arena = Table.grid(expand=True)
         arena.add_column(justify="center", ratio=5)
@@ -72,11 +71,7 @@ class Personaje:
             f"[bold magenta]{oponente.nombre} (RIVAL) ◀[/bold magenta]"
         )
 
-        for i in range(max_lines):
-            line_j = sprite_j[i] if i < len(sprite_j) else ""
-            line_o = sprite_o[i] if i < len(sprite_o) else ""
-            mid = "[yellow]• • •[/yellow]" if i == max_lines // 2 else " "
-            arena.add_row(f"[cyan]{line_j}[/cyan]", mid, f"[magenta]{line_o}[/magenta]")
+        arena.add_row(sprite_j, "\n\n\n\n[yellow]• • •[/yellow]", sprite_o)
 
         stats_j = (
             f"❤️  HP: [green]{bar_j}[/green] {int(jugador.vida)}/{vida_maxima_j}\n"
